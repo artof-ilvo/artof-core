@@ -30,7 +30,7 @@ jobs:
           curl https://dl.min.io/client/mc/release/linux-amd64/mc --create-dirs -o ~/minio-binaries/mc
           chmod +x ~/minio-binaries/mc
           export PATH=$PATH:~/minio-binaries/
-          mc alias set ilvo-minio $MINIO_ENDPOINT $MINIO_ACCESS_KEY $MINIO_SECRET_KEY --api S3v4
+          mc alias set ilvo-minio ${{ secrets.MINIO_ENDPOINT }} ${{ secrets.MINIO_ACCESS_KEY }} ${{ secrets.MINIO_SECRET_KEY }} --api S3v4
 
       - name: Build source code
         run: |
