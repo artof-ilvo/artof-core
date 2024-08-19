@@ -4,22 +4,32 @@
             {
                 "Name": "ilvo-navigation",
                 "Running": true,
-                "SoftwareUpdate": true
+                "SoftwareUpdate": true,
+                "CheckHeartbeat": true
+            },
+            {
+                "Name": "ilvo-operation",
+                "Running": true,
+                "SoftwareUpdate": true,
+                "CheckHeartbeat": true
             },
             {
                 "Name": "ilvo-simulation",
                 "Running": true,
-                "SoftwareUpdate": true
+                "SoftwareUpdate": true,
+                "CheckHeartbeat": true
             },
             {
                 "Name": "ilvo-robot-plc",
                 "Running": true,
-                "SoftwareUpdate": true
+                "SoftwareUpdate": true,
+                "CheckHeartbeat": false
             },
             {
                 "Name": "ilvo-gps",
                 "Running": true,
-                "SoftwareUpdate": true
+                "SoftwareUpdate": true,
+                "CheckHeartbeat": false
             }
         ],
         "ilvoAddons": [
