@@ -1,5 +1,5 @@
-Package: ilvo-artof-core
-Version: 0.1
+Package: artof-core
+Version: 0.0.1
 Maintainer: Axel Willekens <axel.willekens@ilvo.vlaanderen.be>
 Architecture: amd64
 Description: Installation file for the Agriculture Robot Taskmap Operating (ARTOF) operational layer processes
