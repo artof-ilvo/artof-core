@@ -56,7 +56,7 @@ jobs:
 
       - name: Build debian package
         run: |
-          chown -R 1000:1000 artof-core
+          sudo chown -R 1000:1000 artof-core
           dpkg-deb --build artof-core artof-core-dev.deb
 
       - name: Upload debian package
@@ -86,7 +86,7 @@ jobs:
 
       - name: Build debian package
         run: |
-          chown -R 1000:1000 artof-core
+          sudo chown -R 1000:1000 artof-core
           dpkg-deb --build artof-core artof-core-${{ vars.DEBIAN_PACKAGE_TAG }}.deb
           dpkg-deb --build artof-core artof-core-latest.deb
 
