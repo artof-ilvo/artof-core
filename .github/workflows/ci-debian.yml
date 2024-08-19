@@ -8,34 +8,6 @@ on:
 
 jobs:
 
-  stage-docker:
-    name: "Push artof-system to Docker Hub (tag: dev)"
-    runs-on: ubuntu-latest
-    environment:
-      name: staging
-
-    permissions:
-      packages: write
-      contents: read
-      attestations: write
-      id-token: write
-    steps:
-      - name: Check out the repo
-        uses: actions/checkout@v4
-
-      - name: Log in to Docker Hub
-        uses: docker/login-action@v3
-        with:
-          username: ${{ secrets.DOCKER_HUB_USERNAME }}
-          password: ${{ secrets.DOCKER_HUB_TOKEN }}
-
-      - name: Build and push version
-        uses: docker/build-push-action@v5
-        with:
-          context: .
-          push: ${{ github.event_name != 'pull_request' }}
-          tags: ${{ vars.DOCKER_HUB_REGISTRY }}/${{ vars.DOCKER_IMAGE_NAME}}:dev
-
   stage-debian:
     name: "Build debian package"
     runs-on: ubuntu-latest
