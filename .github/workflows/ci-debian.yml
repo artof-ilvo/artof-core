@@ -57,8 +57,8 @@ jobs:
       - name: Build debian package
         run: |
           sudo chown -R 1000:1000 artof-core
-          chmod +x artof-core/usr/lib/ilvo/libsnap7.so
-          chmod +x artof-core/usr/bin/*
+          sudo chmod +x artof-core/usr/lib/ilvo/libsnap7.so
+          sudo chmod +x artof-core/usr/bin/*
           dpkg-deb --build artof-core artof-core-dev.deb
 
       - name: Upload debian package
@@ -89,8 +89,8 @@ jobs:
       - name: Build debian package
         run: |
           sudo chown -R 1000:1000 artof-core
-          chmod +x artof-core/usr/lib/ilvo/libsnap7.so
-          chmod +x artof-core/usr/bin/*
+          sudo chmod +x artof-core/usr/lib/ilvo/libsnap7.so
+          sudo chmod +x artof-core/usr/bin/*
           dpkg-deb --build artof-core artof-core-${{ vars.DEBIAN_PACKAGE_TAG }}.deb
           dpkg-deb --build artof-core artof-core-latest.deb
 
