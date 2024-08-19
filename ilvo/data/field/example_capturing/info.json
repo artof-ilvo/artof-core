@@ -1,0 +1,16 @@
+{
+    "name": "example_capturing",
+    "tasks": [
+        {
+            "name": "Task1",
+            "type": "hitch",
+            "hitch": "FB"
+        },
+        {
+            "name": "Task2",
+            "type": "intermittent",
+            "hitch": "FB",
+            "implement": "auto-label"
+        }
+    ]
+}

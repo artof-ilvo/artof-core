@@ -5,7 +5,7 @@
 This CPP project contains the source code of the processes running in the operation layer of the [ARTOF](https://artof-ilvo.github.io) project.
 
 
-## Build
+## Build source code
 Create a build directory for debug and release builds.
 ```
 mkdir -p build/debug && mkdir -p build/release
@@ -15,10 +15,45 @@ mkdir -p build/debug && mkdir -p build/release
 cd build/debug
 cmake -DCMAKE_BUILD_TYPE=Debug -DINSTALL_FOLDER="/usr/bin" ../..
 ```
+
+Use `make -j8` to build the source code and use `make install` to install the binaries (to `/usr/bin` in this example).
+
+
 2. To release the code use the command below. 
 ```
 cd build/release
 NO_ASAN=1 cmake -DCMAKE_BUILD_TYPE=Release -DINSTALL_FOLDER="<project-folder>/ilvo-artof-core/usr/bin" ../..
+```
+
+Use `make -j8` to build the source code and use `make install` to install the copy the binaries to the debian package folder.
+
+
+## Build docker folder
+
+Mirror the initial program files to the docker folder.
+
+```
+cp -ralf artof-core/var/lib/docker/field/* docker/data/field
+cp -ralf artof-core/var/lib/docker/implement/* docker/data/implement
+cp -alf artof-core/var/lib/docker/settings.json docker/data/settings.json
+cp -alf artof-core/var/lib/docker/types.json docker/data/types.json
+```
+
+The other files have the following important differences:
+
+The `docker/data/config.json`:
+- Line 11: `"ip": "redis"`
+
+The `docker/data/redis.init.json`:
+- Line 47 and 81-86: volume mapping `/d/artof-docker/docker/data/node-red`
+- Line 53 and 92: network mode `"NetworkMode": "ilvo_artof_network"`
+- Line 62 and 101: exposed ports `ExposedPorts`
+
+
+Create zip file and register to minio.
+```
+zip -r artof-docker.zip ilvo
+mc cp ilvo-artof-core.deb ilvo-minio/tv115-ilvo-robotics
 ```
 
 

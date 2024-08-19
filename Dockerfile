@@ -11,7 +11,6 @@ RUN apt-get update && apt-get install -y cmake \
 WORKDIR /app
 
 # Copy the source files
-COPY files/ /app/files/
 COPY src/ /app/src/
 COPY include/ /app/include/
 COPY CMakeLists.txt /app/

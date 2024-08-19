@@ -10,3 +10,4 @@ ilvo-artof-core/usr/bin/*
 ilvo-artof-core/usr/lib/*
 ilvo-artof-core/var/lib/ilvo/*
 *.deb
+*.zip

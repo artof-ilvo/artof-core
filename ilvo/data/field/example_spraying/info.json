@@ -1,0 +1,16 @@
+{
+    "name": "example_spraying",
+    "tasks": [
+        {
+            "name": "Task1",
+            "type": "hitch",
+            "hitch": "FB"
+        },
+        {
+            "name": "Task2",
+            "type": "continuous",
+            "hitch": "FB",
+            "implement": "spray-boom"
+        }
+    ]
+}

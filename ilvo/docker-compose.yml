@@ -1,0 +1,36 @@
+version: '3'
+
+services:
+  redis:
+    image: redis/redis-stack-server:latest
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    networks:
+      - artof_network
+
+  artof:
+    image: axelwillekens/artof-core:latest
+    environment:
+      - ILVO_PATH=/var/lib/ilvo
+      - ILVO_DOCKER_API_VERSION=v1.44
+    volumes:
+      - ./data:/var/lib/ilvo
+      - /var/run/docker.sock:/var/run/docker.sock
+    networks:
+      - artof_network
+    depends_on:
+      - redis
+      
+volumes:
+  redis_data:
+
+networks:
+  artof_network:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.18.0.0/16
+          gateway: 172.18.0.1
+          ip_range: 172.18.0.0/24
