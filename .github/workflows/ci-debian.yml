@@ -64,3 +64,32 @@ jobs:
           mc alias set ilvo-minio ${{ secrets.MINIO_ENDPOINT }} ${{ secrets.MINIO_ACCESS_KEY }} ${{ secrets.MINIO_SECRET_KEY }} --api S3v4
           mc cp artof-core-dev.deb ilvo-minio/tv115-ilvo-robotics
 
+  deploy-debian:
+    name: "Deploy debian package"
+    needs:
+    - build
+    runs-on: ubuntu-latest
+    environment:
+      name: production
+
+    steps:
+      - name: Install minio client
+        run: |
+          curl https://dl.min.io/client/mc/release/linux-amd64/mc --create-dirs -o ~/minio-binaries/mc
+          chmod +x ~/minio-binaries/mc
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: artof-build
+          path: artof-core/
+
+      - name: Build debian package
+        run: |
+          dpkg-deb --build artof-core artof-core-${{ vars.DEBIAN_PACKAGE_TAG }}.deb
+          dpkg-deb --build artof-core artof-core-latest.deb
+
+      - name: Upload debian package
+        run: |
+          export PATH=$PATH:~/minio-binaries/
+          mc alias set ilvo-minio ${{ secrets.MINIO_ENDPOINT }} ${{ secrets.MINIO_ACCESS_KEY }} ${{ secrets.MINIO_SECRET_KEY }} --api S3v4
+          mc cp artof-core-dev.deb ilvo-minio/tv115-ilvo-robotics
