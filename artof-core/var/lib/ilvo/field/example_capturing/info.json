@@ -1,17 +1,16 @@
 {
-    "name": "example_flame_weeding",
+    "name": "example_capturing",
     "tasks": [
         {
             "name": "Task1",
             "type": "hitch",
-            "hitch": "FB",
-            "points": null
+            "hitch": "FB"
         },
         {
             "name": "Task2",
-            "type": "continuous",
+            "type": "intermittent",
             "hitch": "FB",
-            "implement": "flame-weeder"
+            "implement": "auto-label"
         }
     ]
 }

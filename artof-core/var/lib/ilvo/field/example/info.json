@@ -1,16 +1,17 @@
 {
-    "name": "example_image_capturing",
+    "name": "example",
     "tasks": [
         {
             "name": "Task1",
             "type": "hitch",
-            "hitch": "FB"
+            "hitch": "FB",
+            "points": null
         },
         {
             "name": "Task2",
-            "type": "intermittent",
+            "type": "continuous",
             "hitch": "FB",
-            "implement": "auto-label"
+            "implement": "flame-weeder"
         }
     ]
 }
