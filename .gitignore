@@ -1,0 +1,13 @@
+build/
+__pycache__/
+*.code-workspace
+html/
+.DS_Store
+.idea/
+dist/
+logs/
+ilvo-artof-core/usr/bin/*
+ilvo-artof-core/usr/lib/*
+ilvo-artof-core/var/lib/ilvo/*
+*.deb
+*.sh

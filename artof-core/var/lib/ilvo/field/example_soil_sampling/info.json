@@ -1,0 +1,11 @@
+{
+    "name": "example_soil_sampling",
+    "tasks": [
+        {
+            "name": "Task1",
+            "type": "discrete",
+            "hitch": "RB",
+            "implement": "penetrometer"
+        }
+    ]
+}

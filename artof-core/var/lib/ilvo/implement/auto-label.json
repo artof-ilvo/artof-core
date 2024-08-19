@@ -1,0 +1,27 @@
+{
+    "name": "auto-label",
+    "types": ["continuous", "intermittent"],
+    "on_taskmap": true,
+    "sections": [
+        {
+            "id": "L",
+            "width": 0.6,
+            "up": 0.075,
+            "down": 0.075,
+            "transform": {
+				"T": [0.5, -0.98, -0.4],
+				"R": [0.0, 0.0, 0.0]
+			}
+        },
+        {
+            "id": "R",
+            "width": 0.6,
+            "up": 0.075,
+            "down": 0.075,
+            "transform": {
+				"T": [-0.5, -0.98, -0.4],
+				"R": [0.0, 0.0, 0.0]
+			}
+        }
+    ]
+}

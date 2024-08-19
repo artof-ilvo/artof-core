@@ -1,0 +1,15 @@
+{
+    "name": "blok3",
+    "tasks": [
+        {
+            "name": "Task1",
+            "type": "hitch",
+            "hitch": "FB"
+        },
+        {
+            "name": "Task2",
+            "type": "hitch",
+            "hitch": "RB"
+        }
+    ]
+}

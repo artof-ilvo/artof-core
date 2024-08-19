@@ -1,0 +1,87 @@
+{
+    "robot": {
+        "id": 3,
+        "name": "RB",
+        "min": 10,
+        "max": 65,
+        "types": ["hitch", "continuous", "discrete"],
+        "transform": {
+            "translation": [0.0, 0.0, -1.5],
+            "rotation": [0.0, 0.0, 90.0]
+        },
+        "link_length": 0.25
+    },
+    "hitches": [
+        {
+            "id": 1,
+            "name": "FF",
+            "min": 10,
+            "max": 65,
+            "types": ["hitch", "continuous", "discrete"],
+            "transform": {
+                "translation": [0.0, 0.0, -1.5],
+                "rotation": [0.0, 0.0, 90.0]
+            },
+            "link_length": 0.25
+        },
+        {
+            "id": 2,
+            "name": "FB",
+            "min": 10,
+            "max": 65,
+            "types": ["hitch", "continuous", "discrete"],
+            "transform": {
+                "translation": [0.0, 0.0, -1.5],
+                "rotation": [0.0, 0.0, 90.0]
+            },
+            "link_length": 0.25
+        },
+        {
+            "id": 3,
+            "name": "RF",
+            "min": 10,
+            "max": 65,
+            "types": ["hitch", "continuous", "discrete"],
+            "transform": {
+                "translation": [0.0, 0.0, -1.5],
+                "rotation": [0.0, 0.0, 90.0]
+            },
+            "link_length": 0.35
+        },
+        {
+            "id": 4,
+            "name": "RB",
+            "min": 10,
+            "max": 65,
+            "types": ["hitch", "continuous", "discrete"],
+            "transform": {
+                "translation": [0.0, 0.0, -1.5],
+                "rotation": [0.0, 0.0, 90.0]
+            },
+            "link_length": 0.20
+        }
+    ],
+    "sections": [
+        {
+            "id": "FB",
+            "transform": {
+                "translation": [0.0,0.0,0.0],
+                "rotation": [0.0,0.0,0.0]
+            }
+        },
+        {
+            "id": "RB_1",
+            "transform": {
+                "translation": [0.0,0.0,0.0],
+                "rotation": [0.0, 0.0, 180.0]
+            }
+        },
+        {
+            "id": "RB_2",
+            "transform": {
+                "translation": [0.0,10.0,0.0],
+                "rotation": [0.0, 0.0, 180.0]
+            }
+        }
+    ]
+}

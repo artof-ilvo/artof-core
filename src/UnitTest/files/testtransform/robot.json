@@ -1,0 +1,53 @@
+{
+    "gps": {
+		"device": "serial",
+		"utm_zone": 31,
+		"udp_port": 6060,
+		"ip": "",
+		"usb_port": "/dev/septentrio0",
+		"ntrip_server": "flepos.vlaanderen.be",
+		"ntrip_mountpoint": "<ntrip_mountpoint>",
+		"ntrip_uname": "<ntrip_uname>",
+		"ntrip_pwd": "<ntrip_pwd>",
+		"antenna_rotation": -90.0,
+		"transform": {
+			"T": [-0.68064, 0.0, 0.0],
+			"R": [0.0, 0.0, 0.0]
+		}
+	},
+    "robot": {
+		"width": 1.50,
+		"length": 3.80,
+		"wheel_diameter": 0.70,
+		"transform": {
+			"T": [0.0, -1.0029, -1.93],
+			"R": [0.0, 0.0, 0.0]
+		}
+    },
+    "hitches": [
+        {
+			"id": 2,
+			"name": "FB",
+			"min": 10,
+			"max": 65,
+			"types": ["hitch", "continuous", "discrete", "intermittent"],
+			"transform": {
+				"T": [0.0, 0.3314, -1.3831],
+				"R": [0.0, 0.0, 0.0]
+			},
+			"link_length": 0.601
+        }
+    ],
+    "sections": [
+        {
+            "id": "CR",
+            "width": 0.25,
+            "up": 0.075,
+            "down": 0.075,
+            "transform": {
+				"T": [0.35, -0.98, -0.4],
+				"R": [0.0, 0.0, 0.0]
+			}
+        }
+    ]
+}
