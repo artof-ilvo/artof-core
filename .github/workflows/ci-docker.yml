@@ -1,4 +1,4 @@
-name: Publish Docker image and debian package
+name: Publish Docker image
 
 on:
   push:
@@ -9,7 +9,7 @@ on:
 jobs:
 
   stage-docker:
-    name: "Push artof-system to Docker Hub (tag: dev)"
+    name: "Stage Docker image"
     runs-on: ubuntu-latest
     
     environment:

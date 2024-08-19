@@ -1,4 +1,4 @@
-name: Publish Docker image and debian package
+name: Publish Debian package
 
 on:
   push:
@@ -8,11 +8,9 @@ on:
 
 jobs:
 
-  stage-debian:
+  build:
     name: "Build debian package"
     runs-on: ubuntu-latest
-    environment:
-      name: staging
 
     steps:
       - name: Check out the repo
@@ -24,11 +22,6 @@ jobs:
           sudo apt-get install -y cmake curl libcurl4-openssl-dev iputils-ping libboost-filesystem-dev libboost-system-dev libboost-thread-dev
           sudo mkdir -p /usr/lib/ilvo
           sudo cp dependencies/x86_64/shared/libsnap7.so /usr/lib/ilvo/libsnap7.so
-      
-      - name: Install minio client
-        run: |
-          curl https://dl.min.io/client/mc/release/linux-amd64/mc --create-dirs -o ~/minio-binaries/mc
-          chmod +x ~/minio-binaries/mc
 
       - name: Build source code
         run: |
@@ -36,6 +29,30 @@ jobs:
           cd build
           cmake ..
           NO_ASAN=1 cmake -DCMAKE_BUILD_TYPE=Release -DINSTALL_FOLDER="${{ github.workspace }}/artof-core/usr/bin" .. && make -j4 install
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: artof-build
+          path: artof-core/
+
+  stage-debian:
+    name: "Stage debian package"
+    needs:
+    - build
+    runs-on: ubuntu-latest
+    environment:
+      name: staging
+
+    steps:
+      - name: Install minio client
+        run: |
+          curl https://dl.min.io/client/mc/release/linux-amd64/mc --create-dirs -o ~/minio-binaries/mc
+          chmod +x ~/minio-binaries/mc
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: artof-build
+          path: artof-core/
 
       - name: Build debian package
         run: |
