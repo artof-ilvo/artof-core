@@ -22,6 +22,8 @@ jobs:
         run: |
           sudo apt-get update 
           sudo apt-get install -y cmake libcurl4-openssl-dev iputils-ping libboost-filesystem-dev libboost-system-dev libboost-thread-dev
+          sudo mkdir -p /usr/lib/ilvo
+          sudo cp dependencies/x86_64/shared/libsnap7.so /usr/lib/ilvo/libsnap7.so
       
       - name: Build source code
         run: |
