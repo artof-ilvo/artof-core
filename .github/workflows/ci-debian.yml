@@ -25,12 +25,10 @@ jobs:
           sudo mkdir -p /usr/lib/ilvo
           sudo cp dependencies/x86_64/shared/libsnap7.so /usr/lib/ilvo/libsnap7.so
       
-      - name: Configure minio client
+      - name: Install minio client
         run: |
           curl https://dl.min.io/client/mc/release/linux-amd64/mc --create-dirs -o ~/minio-binaries/mc
           chmod +x ~/minio-binaries/mc
-          export PATH=$PATH:~/minio-binaries/
-          mc alias set ilvo-minio ${{ secrets.MINIO_ENDPOINT }} ${{ secrets.MINIO_ACCESS_KEY }} ${{ secrets.MINIO_SECRET_KEY }} --api S3v4
 
       - name: Build source code
         run: |
@@ -42,6 +40,10 @@ jobs:
       - name: Build debian package
         run: |
           dpkg-deb --build artof-core artof-core-dev.deb
-          mc cp artof-core-dev.deb ilvo-minio/tv115-ilvo-robotics
 
+      - name: Upload debian package
+        run: |
+          export PATH=$PATH:~/minio-binaries/
+          mc alias set ilvo-minio ${{ secrets.MINIO_ENDPOINT }} ${{ secrets.MINIO_ACCESS_KEY }} ${{ secrets.MINIO_SECRET_KEY }} --api S3v4
+          mc cp artof-core-dev.deb ilvo-minio/tv115-ilvo-robotics
 
