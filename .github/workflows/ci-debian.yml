@@ -21,10 +21,17 @@ jobs:
       - name: Install dependencies
         run: |
           sudo apt-get update 
-          sudo apt-get install -y cmake libcurl4-openssl-dev iputils-ping libboost-filesystem-dev libboost-system-dev libboost-thread-dev
+          sudo apt-get install -y cmake curl libcurl4-openssl-dev iputils-ping libboost-filesystem-dev libboost-system-dev libboost-thread-dev
           sudo mkdir -p /usr/lib/ilvo
           sudo cp dependencies/x86_64/shared/libsnap7.so /usr/lib/ilvo/libsnap7.so
       
+      - name: Configure minio client
+        run: |
+          curl https://dl.min.io/client/mc/release/linux-amd64/mc --create-dirs -o ~/minio-binaries/mc
+          chmod +x ~/minio-binaries/mc
+          export PATH=$PATH:~/minio-binaries/
+          mc alias set ilvo-minio $MINIO_ENDPOINT $MINIO_ACCESS_KEY $MINIO_SECRET_KEY --api S3v4
+
       - name: Build source code
         run: |
           mkdir build
@@ -35,9 +42,6 @@ jobs:
       - name: Build debian package
         run: |
           dpkg-deb --build artof-core artof-core-dev.deb
+          mc cp artof-core-dev.deb ilvo-minio/tv115-ilvo-robotics
 
-      - uses: actions/upload-artifact@v4
-        with:
-          name: artof-core (dev)
-          path: artof-core-dev.deb
 
