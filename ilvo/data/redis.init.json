@@ -83,7 +83,8 @@
                             "/d/artof-docker/docker/data/implement:/var/lib/ilvo/implement",
                             "/d/artof-docker/docker/data/config.json:/var/lib/ilvo/config.json",
                             "/d/artof-docker/docker/data/settings.json:/var/lib/ilvo/settings.json",
-                            "/d/artof-docker/docker/data/types.json:/var/lib/ilvo/types.json"
+                            "/d/artof-docker/docker/data/types.json:/var/lib/ilvo/types.json",
+                            "/d/artof-docker/docker/data/redis.init.json:/var/lib/ilvo/redis.init.json"
                         ],
                         "RestartPolicy": {
                             "Name": "on-failure",

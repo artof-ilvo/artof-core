@@ -18,11 +18,6 @@ COPY CMakeLists.txt /app/
 COPY dependencies/x86_64/shared/libsnap7.so /usr/lib/ilvo/libsnap7.so
 COPY dependencies/x86_64/static/libshp.a /app/dependencies/x86_64/static/libshp.a
 
-# Configure entrypoint
-COPY entrypoint.sh /entrypoint.sh
-RUN chmod +x /entrypoint.sh
-ENTRYPOINT ["/entrypoint.sh"]
-
 # Build the project
 WORKDIR /app/build
 RUN NO_ASAN=1 cmake -DCMAKE_BUILD_TYPE=Release -DINSTALL_FOLDER="/usr/bin" .. && make -j4 install
