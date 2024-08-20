@@ -45,9 +45,9 @@ The `docker/data/config.json`:
 - Line 11: `"ip": "redis"`
 
 The `docker/data/redis.init.json`:
-- Line 47 and 81-86: volume mapping `/d/artof-docker/docker/data/node-red`
-- Line 53 and 92: network mode `"NetworkMode": "ilvo_artof_network"`
-- Line 62 and 101: exposed ports `ExposedPorts`
+- Line 47 and 81-87: volume mapping `/d/artof-docker/docker/data/node-red`
+- Line 53 and 93: network mode `"NetworkMode": "ilvo_artof_network"`
+- Line 62 and 102: exposed ports `ExposedPorts`
 
 
 Create zip file and register to minio.
