@@ -53,7 +53,7 @@ The `docker/data/redis.init.json`:
 Create zip file and register to minio.
 ```
 zip -r artof-docker.zip ilvo
-mc cp ilvo-artof-core.deb ilvo-minio/tv115-ilvo-robotics
+mc cp artof-docker.zip ilvo-minio/tv115-ilvo-robotics
 ```
 
 
