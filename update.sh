@@ -78,8 +78,9 @@ if ! redis-cli FLUSHALL >/dev/null 2>&1; then
     exit 1
 fi
 
+# docker pull "axelwillekens/artof-system:$tag" >/dev/null
 echo "Updating system addon"
-if ! docker pull "axelwillekens/artof-system:$tag" >/dev/null 2>&1; then
+if ! docker pull "axelwillekens/artof-system:latest" >/dev/null 2>&1; then
     echo "Error: Failed to pull the Docker image." >&2
     exit 1
 fi

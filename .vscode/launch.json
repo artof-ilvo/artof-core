@@ -69,10 +69,10 @@
             "envFile": "${workspaceFolder}/.vscode/.device.env"        
         },
         {
-            "name": "ilvo-simulation",
+            "name": "ilvo-robot-plc",
             "type": "cppdbg",
             "request": "launch",
-            "program": "${workspaceFolder}/build/debug/bin/ilvo-simulation",
+            "program": "${workspaceFolder}/build/debug/bin/ilvo-robot-plc",
             "args": [],
             "stopAtEntry": false,
             "cwd": "${workspaceFolder}",

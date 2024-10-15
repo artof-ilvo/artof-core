@@ -11,3 +11,4 @@ ilvo-artof-core/usr/lib/*
 ilvo-artof-core/var/lib/ilvo/*
 *.deb
 *.zip
+README.private.md

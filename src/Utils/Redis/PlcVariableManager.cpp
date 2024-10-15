@@ -149,7 +149,7 @@ void PlcVariableManager::writeControlValuesToPlc()
             unsigned char *val_char = reinterpret_cast<unsigned char*>(&val);
             controlData[byteCount+0] = (unsigned char) (*val_char & 0xFF);
         } else if (var->getType() == "uint8") {
-            uint8_t val = var->getValue<uint>();
+            uint8_t val = var->getValue<int>();
             unsigned char *val_char = reinterpret_cast<unsigned char*>(&val);
             controlData[byteCount+0] = (unsigned char) (*val_char & 0xFF);
         } else if (var->getType() == "int16") {
@@ -158,7 +158,7 @@ void PlcVariableManager::writeControlValuesToPlc()
             controlData[byteCount+1] = (unsigned char) (*val_char & 0xFF);
             controlData[byteCount+0] = (unsigned char) ((*val_char >> 8) & 0xFF);
         } else if (var->getType() == "uint16") {
-            uint16_t val = var->getValue<uint>();
+            uint16_t val = var->getValue<int>();
             unsigned char *val_char = reinterpret_cast<unsigned char*>(&val);
             controlData[byteCount+1] = (unsigned char) (*val_char & 0xFF);
             controlData[byteCount+0] = (unsigned char) ((*val_char >> 8) & 0xFF);
