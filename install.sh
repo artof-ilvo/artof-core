@@ -26,8 +26,21 @@ echo "Installing Dependencies"
 sudo apt-get update || handle_error "Failed to update package list"
 sudo apt-get install -y cmake curl libcurl4-openssl-dev iputils-ping \
     libboost-filesystem-dev libboost-system-dev libboost-thread-dev || handle_error "Failed to install dependencies"
-
+sudo apt-get install -y cmake curl redis-tools || handle_error "Failed to install dependencies"
 echo "Starting Redis stack in Docker"
+
+# Check if the container already exists
+if docker ps -a --format '{{.Names}}' | grep -q '^redis-stack-server$'; then
+    read -p "Container 'redis-stack-server' already exists. Do you want to remove it? (y/N): " choice
+    if [[ "$choice" == "y" || "$choice" == "Y" ]]; then
+        docker rm -f redis-stack-server || { echo "Failed to remove existing container"; exit 1; }
+        echo "Removed existing container."
+    else
+        echo "Keeping existing container. Exiting."
+        exit 0
+    fi
+fi
+
 docker run -d --restart always --name redis-stack-server -p 6379:6379 redis/redis-stack-server:latest || handle_error "Failed to start Redis stack"
 
 echo "Creating ilvo-robotics service"
@@ -57,5 +70,9 @@ echo "Setting environment variable in ~/.bashrc"
 if ! grep -q "ILVO_PATH=/var/lib/ilvo" ~/.bashrc; then
     echo "export ILVO_PATH=/var/lib/ilvo" >> ~/.bashrc || handle_error "Failed to update ~/.bashrc"
 fi
+
+echo "Create ILVO path"
+source ~/.bashrc
+sudo mkdir -p $ILVO_PATH
 
 echo "Done"
