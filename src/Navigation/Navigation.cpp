@@ -47,7 +47,8 @@ void Navigation::updatePosition()
     if (algorithmMode == AlgorithmMode::EXTERNAL) {
         // set path related parameters to zero
         getVariable("pc.path.orientation")->setValue<double>(0.0);
-        getVariable("pc.path.deviation")->setValue<double>(0.0);
+        getVariable("pc.path.orientation_error")->setValue<double>(0.0);
+        getVariable("pc.path.distance_error")->setValue<double>(0.0);
     } else {
         // update path related parameters
         // update closest point
@@ -63,9 +64,14 @@ void Navigation::updatePosition()
         }
         
         // set the orientaiton and deviation parameters of the path
-        getVariable("pc.path.orientation")->setValue<double>(toRobotFrame(traject->absPathOrientation(position->closestPoint.index)) );
+        double pathOrientation = toRobotFrame(traject->absPathOrientation(position->closestPoint.index));
+        getVariable("pc.path.orientation")->setValue<double>(pathOrientation);
         Line line = traject->pathLine(position->closestPoint.index);
-        getVariable("pc.path.deviation")->setValue<double>(traject->isPointLeft(position->closestPoint.index, position->currentPoint) * line.distance(position->currentPoint));
+        getVariable("pc.path.distance_error")->setValue<double>(traject->isPointLeft(position->closestPoint.index, position->currentPoint) * line.distance(position->currentPoint));
+
+        double robotOrientation = position->robotRefState.getR().asVector()[2];
+        double orientationError = calcSmallestAngle(robotOrientation, pathOrientation);
+        getVariable("pc.path.orientation_error")->setValue<double>(orientationError);
     }
 }
 

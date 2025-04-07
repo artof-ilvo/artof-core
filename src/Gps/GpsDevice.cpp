@@ -27,6 +27,11 @@ GpsDevice::GpsDevice(const string ns) :
  
 
 void GpsDevice::init() {
+    // set raw state to zero
+    State rawState(Vector3d::Zero(), Vector3d::Zero(), Vector3d::Zero(), Vector3d::Zero());
+    platform.updateState(rawState.asAffine());
+    setRedisJsonStates(platform, rawState);
+
     // Connect to gps platform
     if (platform.gps.device.compare("socket") == 0) {
         LoggerStream::getInstance() << INFO << "Connecting to Stonex GPS on IP " << platform.gps.ip << " on port " << platform.gps.udp_port;

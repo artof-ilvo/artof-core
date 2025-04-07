@@ -112,7 +112,9 @@
         "inter_point_distance": "float",
         "weight_factor": "float", 
         "curvature_default": "float",
-        "curvature": "float"
+        "curvature": "float",
+        "curvature_factor": "float",
+        "pid": "pid"
     },
     "pid": {
         "p": "float",

@@ -16,6 +16,7 @@ namespace Pid {
         double previousError;
         double integral;
         double derivative;
+        double output;
 
         bool saturationEnabled;
         double saturationMax;
@@ -30,6 +31,8 @@ namespace Pid {
 
         double getIntegral();
         double getDerivative();
+        double getProportional();
+        double getOutput();
 
         void setSaturation(double min, double max);
         bool isSaturationEnabled();

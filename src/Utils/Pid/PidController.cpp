@@ -5,7 +5,7 @@ using namespace Ilvo::Utils::Pid;
 
 PidController::PidController()
     : kp(0.0), ki(0.0), kd(0.0), 
-    previousError(0.0), integral(0.0), derivative(0.0),
+    previousError(0.0), integral(0.0), derivative(0.0), output(0.0),
     saturationMax(100.0), saturationMin(-100.0), saturationEnabled(false),
     lastTime(std::chrono::steady_clock::now())
 {
@@ -28,7 +28,7 @@ double PidController::update(double error) {
     }
 
     // Calculate the output
-    double output = kp * error + ki * integral + kd * derivative;
+    output = kp * error + ki * integral + kd * derivative;
     if (output > saturationMax) {
         output = saturationMax;
         saturationEnabled = true;
@@ -77,6 +77,15 @@ double PidController::getDerivative()
     return derivative;
 }
 
+double PidController::getProportional()
+{
+    return previousError;
+}
+
+double PidController::getOutput()
+{
+    return output;
+}
 
 void PidController::reset()
 {

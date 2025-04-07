@@ -8,7 +8,7 @@
             "write_db": 43
         },
         "redis": {
-            "ip": "redis",
+            "ip": "127.0.0.1",
             "port": 6379
         }
     },

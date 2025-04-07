@@ -93,7 +93,9 @@
         "latch": "cpp",
         "syncstream": "cpp",
         "geometry": "cpp",
-        "__nullptr": "cpp"
+        "__nullptr": "cpp",
+        "__node_handle": "cpp",
+        "__locale": "cpp"
     },
     "license-header-manager.additionalCommentStyles": [
         {

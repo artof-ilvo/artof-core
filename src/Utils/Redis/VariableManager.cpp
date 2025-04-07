@@ -282,8 +282,8 @@ void VariableManager::setRedisJsonStatus(Platform& platform)
 {
     // status
     json errorJson;
-    double deviation = getVariable("pc.path.deviation")->getValue<double>();
-    double navAbsError = abs(deviation);
+    double distance_error = getVariable("pc.path.distance_error")->getValue<double>();
+    double navAbsError = abs(distance_error);
     stringstream ss;
     ss << std::fixed << std::setprecision(2);
     if (navAbsError <= 1.0) {
@@ -292,8 +292,8 @@ void VariableManager::setRedisJsonStatus(Platform& platform)
         ss << min(navAbsError, 99.0) << " m";
     }
     errorJson["value"] = ss.str();
-    errorJson["positive"] = (deviation > 0 ? navAbsError : 0);
-    errorJson["negative"] = (deviation < 0 ? navAbsError : 0);  
+    errorJson["positive"] = (distance_error > 0 ? navAbsError : 0);
+    errorJson["negative"] = (distance_error < 0 ? navAbsError : 0);  
 
     json statusJson;
     statusJson["error"] = errorJson;

@@ -49,6 +49,8 @@ namespace Core {
         Utils::Pid::PidController steadyStateLateralController;
         /** @brief Pid controller for rough lateral control (if the lateral position is far from the steady state) */
         Utils::Pid::PidController roughLateralController;
+        /** @brief Pid controller for pure pursuit) */
+        Utils::Pid::PidController purepursuitController;
 
         /** @brief Velocity operation data used during creep operation */
         Utils::Settings::VelocityVector creepVelocity;
