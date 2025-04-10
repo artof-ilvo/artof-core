@@ -69,6 +69,7 @@ namespace Settings {
 
         void updateState(Redis::VariableManager* manager);
         bool updateSections(Redis::VariableManager* manager, bool disable=false);
+        bool cardanEnabled(Redis::VariableManager* manager, bool disable=false);
         void activateSection(std::string id, bool value);
 
         bool hitchInTaskMap();

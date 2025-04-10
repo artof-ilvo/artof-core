@@ -49,6 +49,8 @@ void ImplementControl::update(bool autoMode)
             updateHitch(task);
         } else if (task.isType("discrete") && autoMode) {
             updateDiscrete(task); 
+        } else if (task.isType("cardan") ) {
+            updateCardan(task);
         } else if (continuousTask) {
             updateContinuous(task);
         }
@@ -126,10 +128,18 @@ void ImplementControl::updateHitch(Task& task) {
 
 void ImplementControl::updateContinuous(Task& task) 
 {
-    string activateName = "plc.control." + task.getHitch().getEntityName() + (task.isType("cardan") ? ".activate_cardan" : ".activate_continuous");
+    string activateName = "plc.control." + task.getHitch().getEntityName() + ".activate_continuous";
 
-    bool active = false;
-    active = task.updateSections(manager, disableImplement);
+    bool active = task.updateSections(manager, disableImplement);
+
+    manager->getVariable(activateName)->setValue(active);
+} 
+
+void ImplementControl::updateCardan(Task& task) 
+{
+    string activateName = "plc.control." + task.getHitch().getEntityName() + ".activate_cardan";
+
+    bool active = task.cardanEnabled(manager, disableImplement);
 
     manager->getVariable(activateName)->setValue(active);
 } 

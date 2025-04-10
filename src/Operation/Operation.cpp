@@ -38,10 +38,12 @@ void Operation::setRedisJsonImplStates()
 {
     json jImplements = json();
     for (Task& task: traject->getField().getTasks()) {
-        bool implementType = find(implementTypes.begin(), implementTypes.end(), task.getType()) != implementTypes.end();
-        if (implementType) {
-            jImplements[task.getImplement().getName()] = task.getImplement().visualizeJson(platform.gps.utm_zone);
-        }   
+        if (!task.isType("cardan")) {
+            bool implementType = find(implementTypes.begin(), implementTypes.end(), task.getType()) != implementTypes.end();
+            if (implementType) {
+                jImplements[task.getImplement().getName()] = task.getImplement().visualizeJson(platform.gps.utm_zone);
+            }  
+        }
     }
     rs.setRedisJsonValue("implement.states", jImplements);   
 }

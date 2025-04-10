@@ -184,57 +184,60 @@ void NavigationControl::purePursuit() {
     double pidWeightFactor = 1.0 - purePursuitWeightFactor;
     
     double lateralPidOutput = 0.0;  
-    double orientationPidOutput = 0.0;
+    double purePursuitPidOutput = 0.0;
 
     double angularVelocityPurePursuit = 0.0;
     double curvatureDefault = 2 * sin(algorithm.alpha) / position->currentPoint.distance(position->carrotPoint);
     double curvature = curvatureDefault;
-    double curvaturePidFactor = 1.0;
 
     double lateralVelocity, longitudinalVelocity, angularVelocity = 0.0;
 
-    bool enablePid = pidWeightFactor > 0.0 && currentVelocity > 0.01;
+    bool enableLateralController = manager->existsVariable("pc.lateral_controller.enable") ? manager->getVariable("pc.lateral_controller.enable")->getValue<double>() : manager->getPlatform().navModesContainsId(AlgorithmMode::PP_SPINNING_180);
+    bool resetPid = currentVelocity <= 0.01;
 
-    if (!enablePid) {
+    if (resetPid) {
         // reset controllers when vehicle is not moving
         steadyStateLateralController.reset();
         roughLateralController.reset();
         purepursuitController.reset();
     } 
 
-    if (manager->getPlatform().navModesContainsId(AlgorithmMode::PP_SPINNING_180)) {
-       if (enablePid) {
-            // Calculate the errors
-            position->headCurrentPoint = position->robotHeadState.getT();
-            position->headClosestPoint = traject->closestPoint(position->headCurrentPoint, position->closestPoint.index, position->closestPoint.index + (int)(6.0 / interpolationDistance));
-            Line line = traject->pathLine(position->headClosestPoint.index);
-            double pidErrorDistance = traject->isPointLeft(position->headClosestPoint.index, position->headCurrentPoint) * line.distance(position->headCurrentPoint);
+    // Calculate the errors
+    position->headCurrentPoint = position->robotHeadState.getT();
+    position->headClosestPoint = traject->closestPoint(position->headCurrentPoint, position->closestPoint.index, position->closestPoint.index + (int)(6.0 / interpolationDistance));
+    Line line = traject->pathLine(position->headClosestPoint.index);
+    double pidErrorDistance = traject->isPointLeft(position->headClosestPoint.index, position->headCurrentPoint) * line.distance(position->headCurrentPoint);
+
+    double pidErrorOrientation = manager->existsVariable("pc.path.orientation_error") ? manager->getVariable("pc.path.orientation_error")->getValue<double>() : 0.0;  
+
+    if (enableLateralController) {
+        if (!resetPid && pidWeightFactor > 0.0) {
 
             // PID for lateral corrections
             saturationMin = -linearVelocity * pidWeightFactor;
             saturationMax = linearVelocity * pidWeightFactor;
             if (algorithm.steadyState) {
-                kp = manager->existsVariable("pc.pid_steady_state.p") ? manager->getVariable("pc.pid_steady_state.p")->getValue<double>() : 0.0; 
-                ki = manager->existsVariable("pc.pid_steady_state.i") ? manager->getVariable("pc.pid_steady_state.i")->getValue<double>() : 0.0;
-                kd = manager->existsVariable("pc.pid_steady_state.d") ? manager->getVariable("pc.pid_steady_state.d")->getValue<double>() : 0.0;
+                kp = manager->existsVariable("pc.lateral_controller.steady_state.p") ? manager->getVariable("pc.lateral_controller.steady_state.p")->getValue<double>() : 0.0; 
+                ki = manager->existsVariable("pc.lateral_controller.steady_state.i") ? manager->getVariable("pc.lateral_controller.steady_state.i")->getValue<double>() : 0.0;
+                kd = manager->existsVariable("pc.lateral_controller.steady_state.d") ? manager->getVariable("pc.lateral_controller.steady_state.d")->getValue<double>() : 0.0;
                 steadyStateLateralController.setSaturation(saturationMin, saturationMax);
                 steadyStateLateralController.setParameters(kp, ki, kd);
                 lateralPidOutput = steadyStateLateralController.update(pidErrorDistance);
 
-                manager->getVariable("pc.pid_steady_state.proportional")->setValue<double>(steadyStateLateralController.getProportional());
-                manager->getVariable("pc.pid_steady_state.integral")->setValue<double>(steadyStateLateralController.getIntegral());
-                manager->getVariable("pc.pid_steady_state.derivative")->setValue<double>(steadyStateLateralController.getDerivative());
-                manager->getVariable("pc.pid_steady_state.value")->setValue<double>(steadyStateLateralController.getOutput());
+                manager->getVariable("pc.lateral_controller.steady_state.proportional")->setValue<double>(steadyStateLateralController.getProportional());
+                manager->getVariable("pc.lateral_controller.steady_state.integral")->setValue<double>(steadyStateLateralController.getIntegral());
+                manager->getVariable("pc.lateral_controller.steady_state.derivative")->setValue<double>(steadyStateLateralController.getDerivative());
+                manager->getVariable("pc.lateral_controller.steady_state.value")->setValue<double>(steadyStateLateralController.getOutput());
             } else {
-                kp = manager->existsVariable("pc.pid_rough.p") ? manager->getVariable("pc.pid_rough.p")->getValue<double>() : 0.0;
+                kp = manager->existsVariable("pc.lateral_controller.rough.p") ? manager->getVariable("pc.lateral_controller.rough.p")->getValue<double>() : 0.0;
                 roughLateralController.setSaturation(saturationMin, saturationMax);
                 roughLateralController.setParameters(kp, 0.0, 0.0);
                 lateralPidOutput = roughLateralController.update(pidErrorDistance);
 
-                manager->getVariable("pc.pid_rough.proportional")->setValue<double>(roughLateralController.getProportional());
-                manager->getVariable("pc.pid_rough.integral")->setValue<double>(roughLateralController.getIntegral());
-                manager->getVariable("pc.pid_rough.derivative")->setValue<double>(roughLateralController.getDerivative());
-                manager->getVariable("pc.pid_rough.value")->setValue<double>(roughLateralController.getOutput());
+                manager->getVariable("pc.lateral_controller.rough.proportional")->setValue<double>(roughLateralController.getProportional());
+                manager->getVariable("pc.lateral_controller.rough.integral")->setValue<double>(roughLateralController.getIntegral());
+                manager->getVariable("pc.lateral_controller.rough.derivative")->setValue<double>(roughLateralController.getDerivative());
+                manager->getVariable("pc.lateral_controller.rough.value")->setValue<double>(roughLateralController.getOutput());
             }
         } 
 
@@ -242,26 +245,24 @@ void NavigationControl::purePursuit() {
         longitudinalVelocity = sgn(linearVelocity) * sqrt(pow(linearVelocity, 2) - pow(lateralVelocity, 2)); // speed vactor may not go over the asked speed
         angularVelocityPurePursuit = longitudinalVelocity * curvature;
         setVelocityOperation(longitudinalVelocity, lateralVelocity, angularVelocityPurePursuit);
-    } else {
-        // Calculate the errors
-        double pidErrorOrientation = manager->existsVariable("pc.path.orientation_error") ? manager->getVariable("pc.path.orientation_error")->getValue<double>() : 0.0;  
-        
+    } else {        
         // PID for angular corrections
-        kp = manager->existsVariable("pc.purepursuit.pid.p") ? manager->getVariable("pc.purepursuit.pid.p")->getValue<double>() : 0.0; 
-        ki = manager->existsVariable("pc.purepursuit.pid.i") ? manager->getVariable("pc.purepursuit.pid.i")->getValue<double>() : 0.0;
-        kd = manager->existsVariable("pc.purepursuit.pid.d") ? manager->getVariable("pc.purepursuit.pid.d")->getValue<double>() : 0.0;
-        saturationMin = manager->existsVariable("pc.purepursuit.pid.saturation.min") ? manager->getVariable("pc.purepursuit.pid.saturation.min")->getValue<double>() : -1.0;
-        saturationMax = manager->existsVariable("pc.purepursuit.pid.saturation.max") ? manager->getVariable("pc.purepursuit.pid.saturation.max")->getValue<double>() : 1.0;
-        purepursuitController.setSaturation(saturationMin, saturationMax);
-        purepursuitController.setParameters(kp, ki, kd);
-        orientationPidOutput = purepursuitController.update(pidErrorOrientation);
-        manager->getVariable("pc.purepursuit.pid.proportional")->setValue<double>(purepursuitController.getProportional());
-        manager->getVariable("pc.purepursuit.pid.integral")->setValue<double>(purepursuitController.getIntegral());
-        manager->getVariable("pc.purepursuit.pid.derivative")->setValue<double>(purepursuitController.getDerivative());
-        manager->getVariable("pc.purepursuit.pid.value")->setValue<double>(purepursuitController.getOutput());
-        curvaturePidFactor = 1 + abs(orientationPidOutput);
+        if (!resetPid) {
+            kp = manager->existsVariable("pc.purepursuit.pid.p") ? manager->getVariable("pc.purepursuit.pid.p")->getValue<double>() : 0.0; 
+            ki = manager->existsVariable("pc.purepursuit.pid.i") ? manager->getVariable("pc.purepursuit.pid.i")->getValue<double>() : 0.0;
+            kd = manager->existsVariable("pc.purepursuit.pid.d") ? manager->getVariable("pc.purepursuit.pid.d")->getValue<double>() : 0.0;
+            saturationMin = manager->existsVariable("pc.purepursuit.pid.saturation.min") ? manager->getVariable("pc.purepursuit.pid.saturation.min")->getValue<double>() : -1.0;
+            saturationMax = manager->existsVariable("pc.purepursuit.pid.saturation.max") ? manager->getVariable("pc.purepursuit.pid.saturation.max")->getValue<double>() : 1.0;
+            purepursuitController.setSaturation(saturationMin, saturationMax);
+            purepursuitController.setParameters(kp, ki, kd);
+            purePursuitPidOutput = purepursuitController.update(pidErrorDistance);
+            manager->getVariable("pc.purepursuit.pid.proportional")->setValue<double>(purepursuitController.getProportional());
+            manager->getVariable("pc.purepursuit.pid.integral")->setValue<double>(purepursuitController.getIntegral());
+            manager->getVariable("pc.purepursuit.pid.derivative")->setValue<double>(purepursuitController.getDerivative());
+            manager->getVariable("pc.purepursuit.pid.value")->setValue<double>(purepursuitController.getOutput());
+        }
 
-        curvature = curvatureDefault * curvaturePidFactor;
+        curvature = curvatureDefault + purePursuitPidOutput;
         longitudinalVelocity = linearVelocity; // forward velocity remains the same
         angularVelocityPurePursuit = longitudinalVelocity * curvature; 
         angularVelocity = angularVelocityPurePursuit; 
@@ -270,7 +271,6 @@ void NavigationControl::purePursuit() {
 
     manager->getVariable("pc.purepursuit.curvature_default")->setValue<double>(curvatureDefault);
     manager->getVariable("pc.purepursuit.curvature")->setValue<double>(curvature);
-    manager->getVariable("pc.purepursuit.curvature_factor")->setValue<double>(curvaturePidFactor);
 
 }
 

@@ -254,6 +254,21 @@ bool Task::updateSections(VariableManager* manager, bool disable)
     return activeSections;
 }
 
+bool Task::cardanEnabled(VariableManager* manager, bool disable)
+{
+    bool activeSections = false;
+
+    for (int i = 0; i < implement.getSections().size(); i++) {
+        auto section = implement.getSections().at(i);
+
+        if (insideTaskMap(section, disable)) {
+            return true;
+        }
+    }
+
+    return false;
+}
+
 void Task::activateSection(string id, bool value)
 {
     for (auto section: implement.getSections()) {
@@ -269,13 +284,20 @@ bool Task::insideTaskMap(shared_ptr<Section> section, bool disable)
     Point currentPosition(section->getState().getT().asVector());
     section->clearActivationGeometry();
 
-    if (type.compare("continuous") == 0 || type.compare("cardan") == 0) {
+    if (type.compare("continuous") == 0) { 
         for (PolygonPtr polygon: get<PolygonVector>(polygons)) { 
             if (overlaps(polygonSection.geometry(), polygon->geometry()) || covered_by(polygonSection.geometry(), polygon->geometry())) {
                 section->setActivationGeometry(polygon);
                 return !disable;
             }
         }     
+    } else if (type.compare("cardan") == 0) {
+        for (PolygonPtr polygon: get<PolygonVector>(polygons)) { 
+            if (overlaps(polygonSection.geometry(), polygon->geometry()) || covered_by(polygonSection.geometry(), polygon->geometry())) {
+                // section->setActivationGeometry(polygon);
+                return !disable;
+            }
+        } 
     } else if (type.compare("intermittent") == 0) {
         PointVector vec = get<PointVector>(points);
         std::vector<PointPtr> points = vec.nearby(currentPosition, 40);

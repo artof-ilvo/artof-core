@@ -113,8 +113,12 @@
         "weight_factor": "float", 
         "curvature_default": "float",
         "curvature": "float",
-        "curvature_factor": "float",
         "pid": "pid"
+    },
+    "lateral_controller": {
+        "steady_state": "pid",
+        "rough": "pid",
+        "enable": "bool"
     },
     "pid": {
         "p": "float",

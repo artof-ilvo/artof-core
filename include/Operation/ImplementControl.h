@@ -73,6 +73,8 @@ namespace Core {
         void updateHitch(Utils::Settings::Task& task);
         /** @brief Update continuous ImplementControl */
         void updateContinuous(Utils::Settings::Task& task);
+        /** @brief Update cardan ImplementControl */
+        void updateCardan(Utils::Settings::Task& task);
         /** @brief Update discrete ImplementControl */
         void updateDiscrete(Utils::Settings::Task& task);
     };
