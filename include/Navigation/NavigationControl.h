@@ -100,7 +100,7 @@ namespace Core {
         /** @brief The robot spins (rotates in place) */
         bool spinning();
         /** @brief The robot turns (no spinning) */
-        bool turn();
+        bool turn(double earlyStoppingAngle=0.0);
         /** @brief The robot drives to a specific corner */
         bool creepToCorner();
         /** @brief The robot drives to a specific position */

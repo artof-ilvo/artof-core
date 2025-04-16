@@ -105,7 +105,9 @@
         "max_angular_velocity": "float",
         "mode": "int",
         "spin_angle": "float",
-        "turning_radius": "float"
+        "stop_turn_angle": "float",
+        "turning_radius": "float",
+        "turning_radius_factor": "float"
     },
     "purepursuit": {
         "carrot_distance": "float",

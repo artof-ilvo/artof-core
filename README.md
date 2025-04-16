@@ -27,6 +27,11 @@ NO_ASAN=1 cmake -DCMAKE_BUILD_TYPE=Release -DINSTALL_FOLDER="<project-folder>/il
 
 Use `make -j8` to build the source code and use `make install` to install the copy the binaries to the debian package folder.
 
+3. (Optional) build dev package and push to minio
+```
+dpkg-deb --build artof-core artof-core-dev.deb
+mc cp artof-core-dev.deb ilvo-minio/tv115-ilvo-robotics
+```
 
 ## Build docker folder
 

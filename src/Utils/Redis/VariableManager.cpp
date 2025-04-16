@@ -310,9 +310,13 @@ void VariableManager::setRedisJsonStatus(Platform& platform)
         statusJson["power_level"] = 0.0;
     }
     for (AutoMode state: platform.auto_modes) {
-        if (getVariable("plc.monitor.state." + state.name)->getValue<bool>()) {
-            statusJson["current_state"] = state.name;
-            break;
+        if (getVariable("pc.simulation.active")->getValue<bool>()) {
+           statusJson["current_state"] = getVariable("pc.simulation.auto")->getValue<bool>() ? "auto" : "normal" ;
+        } else {
+            if (getVariable("plc.monitor.state." + state.name)->getValue<bool>()) {
+                statusJson["current_state"] = state.name;
+                break;
+            }
         }
     }
     rs.setRedisJsonValue("robot.status", statusJson);

@@ -247,7 +247,7 @@ void NavigationControl::purePursuit() {
         setVelocityOperation(longitudinalVelocity, lateralVelocity, angularVelocityPurePursuit);
     } else {        
         // PID for angular corrections
-        if (!resetPid) {
+        if (!resetPid && pidWeightFactor > 0.0) {
             kp = manager->existsVariable("pc.purepursuit.pid.p") ? manager->getVariable("pc.purepursuit.pid.p")->getValue<double>() : 0.0; 
             ki = manager->existsVariable("pc.purepursuit.pid.i") ? manager->getVariable("pc.purepursuit.pid.i")->getValue<double>() : 0.0;
             kd = manager->existsVariable("pc.purepursuit.pid.d") ? manager->getVariable("pc.purepursuit.pid.d")->getValue<double>() : 0.0;
@@ -262,10 +262,9 @@ void NavigationControl::purePursuit() {
             manager->getVariable("pc.purepursuit.pid.value")->setValue<double>(purepursuitController.getOutput());
         }
 
-        curvature = curvatureDefault + purePursuitPidOutput;
-        longitudinalVelocity = linearVelocity; // forward velocity remains the same
+        longitudinalVelocity = linearVelocity; 
         angularVelocityPurePursuit = longitudinalVelocity * curvature; 
-        angularVelocity = angularVelocityPurePursuit; 
+        angularVelocity = purePursuitWeightFactor * angularVelocityPurePursuit + pidWeightFactor * purePursuitPidOutput; 
         setVelocityOperation(longitudinalVelocity, 0.0, angularVelocity);
     }
 
@@ -336,11 +335,11 @@ bool NavigationControl::creepToPosition()
     }
 }
 
-bool NavigationControl::turn()
+bool NavigationControl::turn(double earlyStoppingAngle)
 {
     double smallestAngle = calcSmallestAngle(position->heading, algorithm.headingGoal);
 
-    if (stopTurning(smallestAngle)) {
+    if (stopTurning(smallestAngle, earlyStoppingAngle)) {
         LoggerStream::getInstance() << DEBUG << "yaw: " << position->heading << "°, algorithm.headingGoal: " << algorithm.headingGoal << "°";
 
         return false;
@@ -356,7 +355,8 @@ bool NavigationControl::spinning() {
     double smallestAngle;  // in degrees
     smallestAngle = calcSmallestAngle(position->heading, algorithm.headingGoal);
 
-    if (stopTurning(smallestAngle, 3.0)) {
+    double stopTurnAngle = manager->existsVariable("pc.navigation.stop_turn_angle") ? manager->getVariable("pc.navigation.stop_turn_angle")->getValue<double>() : 0.0;
+    if (stopTurning(smallestAngle, stopTurnAngle)) {
         LoggerStream::getInstance() << DEBUG << "yaw: " << position->heading << "°, algorithm.headingGoal: " << algorithm.headingGoal << "°";
 
 	    return false;
@@ -528,10 +528,13 @@ void NavigationControl::stateMachineGTurn() {
 
 void NavigationControl::setTurningVelocity()
 {
-    double longitudinalVelcoity = manager->getPlatform().auto_velocity.min; // safety speed
+    double longitudinalVelocity = manager->getPlatform().auto_velocity.min; // safety speed
     double signOmega = -traject->isPointLeft(position->corners.previousCorner.index-3, position->corners.nextCorner.point);
-    double angularVelocity = signOmega * manager->getPlatform().auto_velocity.min / manager->getVariable("pc.navigation.turning_radius")->getValue<double>();
-    creepVelocity.set(longitudinalVelcoity, 0.0, angularVelocity);
+    double turningRadius = manager->getVariable("pc.navigation.turning_radius")->getValue<double>();
+    double turningRadiusFactor = manager->existsVariable("pc.navigation.turning_radius_factor") ? manager->getVariable("pc.navigation.turning_radius_factor")->getValue<double>() : 1.0;
+    turningRadiusFactor = turningRadiusFactor > 0.75 ? turningRadiusFactor : 1.0;
+    double angularVelocity = signOmega * longitudinalVelocity / (turningRadius * turningRadiusFactor);
+    creepVelocity.set(longitudinalVelocity, 0.0, angularVelocity);
 }
 
 void NavigationControl::stateMachineRollBack()
@@ -557,9 +560,12 @@ void NavigationControl::stateMachineRollBack()
         }
         break;}
     case TURN:{
-        if (!turn()) {
+        bool turnNextCorner = position->corners.nextCorner.point.distance(position->currentPoint) <= (manager->getVariable("pc.navigation.turning_radius")->getValue<double>() + 1.5);
+        double stopTurnAngle = manager->existsVariable("pc.navigation.stop_turn_angle") ? manager->getVariable("pc.navigation.stop_turn_angle")->getValue<double>() : 0.0;
+        double earlyStoppingAngle = turnNextCorner ? 0.0 : stopTurnAngle;
+        if (!turn(earlyStoppingAngle)) {
             // is there another corner nearby? Creep backwards to come in a good position to take this corner
-            if (position->corners.nextCorner.point.distance(position->currentPoint) <= (manager->getVariable("pc.navigation.turning_radius")->getValue<double>())) {                
+            if (turnNextCorner) {                
                 LoggerStream::getInstance() << DEBUG << "TURN -> CREEP_TO_POSITION";
                 algorithm.fsmState = CREEP_TO_POSITION;
             } else {
