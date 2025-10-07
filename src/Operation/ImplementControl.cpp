@@ -66,6 +66,7 @@ void ImplementControl::reset()
 
         if (task.isType("discrete")) {
             traject->onDiscrReset(task.getHitch().getState().asAffine());
+            currentDiscrImplState = DRIVING;
         }
 
         task.getImplement().resetSections(); 
@@ -122,8 +123,10 @@ void ImplementControl::updateHitch(Task& task) {
     }
 
     // else for hitch or discrete task
+    // if (task.isType("hitch")) {
     active = task.hitchInTaskMap()  && !disableImplement;
-    manager->getVariable("plc.control." + entityName + ".activate")->setValue(active); 
+    manager->getVariable("plc.control." + entityName + ".activate")->setValue(active);  
+    // }
 }
 
 void ImplementControl::updateContinuous(Task& task) 
