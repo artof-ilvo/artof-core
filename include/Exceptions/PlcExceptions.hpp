@@ -81,6 +81,16 @@ namespace Exception {
       const char* what() const throw() { return s.c_str(); }
    };
 
+   struct PlcProtocolNotSupportedException : public std::exception
+   {
+      std::string s;
+      PlcProtocolNotSupportedException(std::string type) : 
+         s("PLC communication type " + type + " is not supported. Supported types are 's7' and 'udp'.")
+      {}
+      ~PlcProtocolNotSupportedException() throw () {} // Updated
+      const char* what() const throw() { return s.c_str(); }
+   };
+
 } // Exception
 } // Ilvo
 

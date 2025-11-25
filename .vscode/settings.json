@@ -95,7 +95,17 @@
         "geometry": "cpp",
         "__nullptr": "cpp",
         "__node_handle": "cpp",
-        "__locale": "cpp"
+        "__locale": "cpp",
+        "expected": "cpp",
+        "format": "cpp",
+        "spanstream": "cpp",
+        "stacktrace": "cpp",
+        "stdfloat": "cpp",
+        "__hash_table": "cpp",
+        "__split_buffer": "cpp",
+        "__tree": "cpp",
+        "queue": "cpp",
+        "stack": "cpp"
     },
     "license-header-manager.additionalCommentStyles": [
         {

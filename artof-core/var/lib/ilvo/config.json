@@ -1,11 +1,10 @@
 {
     "protocols": {
-        "snap7": {
-            "ip": "192.168.1.1",
-            "rack": 0,
-            "read_db": 35,
-            "slot": 1,
-            "write_db": 43
+        "plc": {
+            "protocol": "udp",
+            "ip": "127.0.0.1",
+            "read_port": 5000,
+            "write_port": 5001
         },
         "redis": {
             "ip": "127.0.0.1",

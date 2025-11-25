@@ -114,7 +114,13 @@
         "inter_point_distance": "float",
         "weight_factor": "float", 
         "curvature_default": "float",
-        "curvature": "float"
+        "curvature": "float",
+        "pid": "pid"
+    },
+    "lateral_controller": {
+        "steady_state": "pid",
+        "rough": "pid",
+        "enable": "bool"
     },
     "pid": {
         "p": "float",

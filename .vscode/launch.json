@@ -106,7 +106,7 @@
                     "ignoreFailures": true
                 }
             ],
-            "envFile": "${workspaceFolder}/.vscode/.device.env"        
+            "envFile": "${workspaceFolder}/.vscode/.debug.env"        
         },
         {
             "name": "job_test",

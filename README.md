@@ -61,6 +61,13 @@ zip -r artof-docker.zip ilvo
 mc cp artof-docker.zip ilvo-minio/tv115-ilvo-robotics
 ```
 
+## Debug
+### Robot PLC
+* Write and read via the terminal
+- Write `echo "Hello UDP3" | nc -u 127.0.0.1 5001`
+- Read `nc -ul 5001`
+* Debug UDP reading the bytes from the PLC: ``ncat -ulk 5001 | hexdump -C``
+* Debug UDP writing the bytes to the PLC: ``ncat -ulk 5000 | hexdump -C``
 
 ## Licence
 

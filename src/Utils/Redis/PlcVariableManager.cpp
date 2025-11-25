@@ -42,7 +42,7 @@ PlcVariableManager::~PlcVariableManager()
 }
 
 void PlcVariableManager::resetCount() {
-    byteCount = 0;
+    byteCount = 20;  // account for udp header
     bitCount = 0;
     previousEntity = "";
 }
@@ -60,11 +60,12 @@ void PlcVariableManager::beginCount(VariablePtr var) {
 
 void PlcVariableManager::endCount(VariablePtr var) {
     if (var->getType() == "bool") {
-        bitCount += 1;
-        if (bitCount == 8) {
-            bitCount = 0;
-            byteCount += 1;
-        } 
+        // bitCount += 1;
+        // if (bitCount == 8) {
+        //     bitCount = 0;
+        //     byteCount += 1;
+        // } 
+        byteCount += 1;
     } else {
         bitCount = 0;
         byteCount += var->getSize();
@@ -91,6 +92,8 @@ void PlcVariableManager::setSize(PlcType plcType)
     } else if (plcType == PlcType::CONTROL) {
         controlSize  = byteCount + (bitCount > 0 ? 1 : 0);
     }
+
+    monitorSize += 20; // account for udp header
 }
 
 void PlcVariableManager::printRapport(LoggerStream& logger, vector<VariablePtr>& variables)
@@ -216,20 +219,14 @@ void PlcVariableManager::writeControlValuesToPlc()
     }
 
     // write data to plc
-    longword err = plcPtr->DBWrite(plcPtr->writeDb, 0, controlSize, controlData);
-    if (err != 0) {
-        throw PlcWriteException(err);
-    } 
+    plcPtr->write(controlSize, controlData);
 }
 
 void PlcVariableManager::readMonitorValuesFromPlc()
 {
     // read data from plc
     if (monitorSize > 0) {
-        longword err = plcPtr->DBRead(plcPtr->readDb, 0, monitorSize, monitorData);
-        if (err != 0) {
-            throw PlcReadException(err);
-        }
+        plcPtr->read(monitorSize, monitorData);
     }
 
     // extract read values
@@ -259,13 +256,13 @@ void PlcVariableManager::readMonitorValuesFromPlc()
         } else if (var->getType() == "float") {
             int const plc_size = 4;
             IEEE_754::_2008::Binary<32> f;
-            unsigned char b[] = {monitorData[byteCount+3], monitorData[byteCount+2], monitorData[byteCount+1], monitorData[byteCount+0]};
+            unsigned char b[] = {monitorData[byteCount+0], monitorData[byteCount+1], monitorData[byteCount+2], monitorData[byteCount+3]};
             memcpy(&f, &b, plc_size);
             var->setValue((double) f);
         } else if (var->getType() == "lfloat") {
             int const plc_size = 8;
             IEEE_754::_2008::Binary<64> f;
-            unsigned char b[] = {monitorData[byteCount+7], monitorData[byteCount+6], monitorData[byteCount+5], monitorData[byteCount+4], monitorData[byteCount+3], monitorData[byteCount+2], monitorData[byteCount+1], monitorData[byteCount+0]};
+            unsigned char b[] = {monitorData[byteCount+0], monitorData[byteCount+1], monitorData[byteCount+2], monitorData[byteCount+3], monitorData[byteCount+4], monitorData[byteCount+5], monitorData[byteCount+6], monitorData[byteCount+7]};
             memcpy(&f, &b, plc_size);
             var->setValue((double) f);
         } else if (var->getType() == "string") {
@@ -274,7 +271,7 @@ void PlcVariableManager::readMonitorValuesFromPlc()
             string val(val_data);
             var->setValue(trim(val));
         } else if (var->getType() == "bool") {
-            var->setValue((bool) ((monitorData[byteCount+0] >> bitCount) & 0x01));
+            var->setValue((bool) (monitorData[byteCount+0] & 0x01));
         } else {
             throw PlcNoSuchDataTypeException(var);
         }
@@ -307,16 +304,21 @@ void PlcVariableManager::init()
 
 
     // connect to plc
-    plcPtr = make_unique<Plc>(jConfig["protocols"]["snap7"]);
-    
+    if (jConfig["protocols"]["plc"]["protocol"] == "s7") {
+        plcPtr = make_unique<S7Plc>(jConfig["protocols"]["plc"]);
+    } else if (jConfig["protocols"]["plc"]["protocol"] == "udp") {
+        plcPtr = make_unique<UdpPlc>(jConfig["protocols"]["plc"]);
+    } else {
+        throw PlcProtocolNotSupportedException(jConfig["protocols"]["plc"]["protocol"]);
+    }
 }
 
 void PlcVariableManager::serverTick() 
 {
-    if (plcPtr->Connected()) {
-        writeControlValuesToPlc();
+    if (plcPtr->connected()) {
+        // writeControlValuesToPlc();
         readMonitorValuesFromPlc();
     } else {
-        throw PlcNotFound(plcPtr->ip);
+        throw PlcNotFound(plcPtr->getIp());
     }
 }
