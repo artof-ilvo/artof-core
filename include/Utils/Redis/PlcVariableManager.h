@@ -32,6 +32,8 @@ namespace Redis {
         /** @brief Buffer for control data */
         unsigned char *controlData;
 
+        int32_t msgWriteCounter;
+
         // Count information
         int byteCount;
         int bitCount;

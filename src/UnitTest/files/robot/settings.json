@@ -1,5 +1,5 @@
 {
-    "name": "robotframework",
+    "name": "FieldWorkers-WTD",
     "robot": {
         "width": 1.5,
         "length": 3.8,
@@ -22,14 +22,6 @@
         "max": 1.7
     },
     "nav_modes": [
-        {
-            "id": 1,
-            "name": "pp 90\u00b0 turn"
-        },
-        {
-            "id": 2,
-            "name": "pp 180\u00b0 turn"
-        },
         {
             "id": 3,
             "name": "pure pp"
@@ -74,35 +66,12 @@
                 ]
             },
             "link_length": 0.601
-        },
-        {
-            "id": 4,
-            "name": "RB",
-            "min": 10,
-            "max": 58,
-            "types": [
-                "hitch",
-                "continuous",
-                "discrete",
-                "intermittent"
-            ],
-            "transform": {
-                "T": [
-                    0,
-                    -2.45,
-                    -1.2
-                ],
-                "R": [
-                    0,
-                    0,
-                    0
-                ]
-            },
-            "link_length": 0.55
         }
     ],
     "gps": {
-        "device": "serial",
+        "device": "socket",
+        "ip": "192.168.1.21",
+        "udp_port": 23,
         "utm_zone": 31,
         "usb_port": "/dev/septentrio0",
         "ntrip_server": "flepos.vlaanderen.be",

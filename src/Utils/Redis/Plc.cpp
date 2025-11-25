@@ -123,27 +123,75 @@ UdpPlc::~UdpPlc()
 void UdpPlc::read(int size, unsigned char* data)
 {
     size_t len = socketRead.receive_from(boost::asio::buffer(data, size), readerEndpoint);
-    std::cout << "Received " << len << " bytes from PLC via UDP." << std::endl;
-    // Print the variables for debugging
-    for (size_t i = 0; i < len; i++) {
-        std::cout << std::hex << static_cast<int>(data[i]) << " ";
-    }
-    std::cout << std::endl;
+
+    // -- DEBUGGING PURPOSES --
+    // std::cout << "Received " << len << " bytes from PLC via UDP." << std::endl;
+    // std::cout << "✨ Byte sequence (Hex):" << std::endl;
     
+    // // Set up the stream for "pretty" hex printing
+    // std::cout << std::hex // Print in hexadecimal format
+    //           << std::uppercase // Use uppercase letters (e.g., 'F' instead of 'f')
+    //           << std::setfill('0'); // Use '0' as the padding character
+
+    // // Print the bytes for debugging
+    // for (size_t i = 0; i < len; i++) {
+    //     // setw(2) ensures two characters are printed. 
+    //     // setfill('0') ensures the padding is a '0' (e.g., 1 becomes 01).
+    //     std::cout << std::setw(2) << static_cast<int>(data[i]) << " ";
+        
+    //     // Optional: Add a newline every 16 bytes for better readability
+    //     if ((i + 1) % 16 == 0) {
+    //         std::cout << "\n";
+    //     }
+    // }
+    
+    // // Crucial: Reset the stream format after the loop
+    // std::cout << std::dec << std::endl;
+
     // size_t len = socketRead.receive_from(boost::asio::buffer(data, size), readerEndpoint);
     // std::cout << "Received " << len << " bytes from PLC via UDP." << std::endl;
 
     // if (len != size) {
     //     throw PlcReadException(len);
     // }
+    // -- DEBUGGING PURPOSES --
 }
 
 void UdpPlc::write(int size, unsigned char* data)
 {
-    // Check if endpoint is valid before sending
-    std::cout << "Endpoint: " << writerEndpoint.address() << ":" 
-            << writerEndpoint.port() << std::endl;
+    // -- DEBUGGING PURPOSES --
+
+    // std::cout << "Send " << size << " bytes from PLC via UDP." << std::endl;
+    // std::cout << "✨ Byte sequence (Hex):" << std::endl;
+    
+    // // Set up the stream for "pretty" hex printing
+    // std::cout << std::hex // Print in hexadecimal format
+    //           << std::uppercase // Use uppercase letters (e.g., 'F' instead of 'f')
+    //           << std::setfill('0'); // Use '0' as the padding character
+
+    // // Print the bytes for debugging
+    // for (size_t i = 0; i < size; i++) {
+    //     // setw(2) ensures two characters are printed. 
+    //     // setfill('0') ensures the padding is a '0' (e.g., 1 becomes 01).
+    //     std::cout << std::setw(2) << static_cast<int>(data[i]) << " ";
+        
+    //     // Optional: Add a newline every 16 bytes for better readability
+    //     if ((i + 1) % 16 == 0) {
+    //         std::cout << "\n";
+    //     }
+    // }
+    
+    // // Crucial: Reset the stream format after the loop
+    // std::cout << std::dec << std::endl;
+
+
+    // // Check if endpoint is valid before sending
+    // std::cout << "Endpoint: " << writerEndpoint.address() << ":" 
+    //         << writerEndpoint.port() << std::endl;
+    // -- DEBUGGING PURPOSES --
 
     size_t len = socketWrite.send_to(boost::asio::buffer(data, size), writerEndpoint);
-    std::cout << "Sent " << len << " bytes to PLC via UDP." << std::endl;
+    // -- DEBUGGING PURPOSES --
+    // std::cout << "Sent " << len << " bytes to PLC via UDP." << std::endl;
+    // -- DEBUGGING PURPOSES --
 }

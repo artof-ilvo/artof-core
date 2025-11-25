@@ -2,7 +2,7 @@
     "protocols": {
         "plc": {
             "protocol": "udp",
-            "ip": "0.0.0.0",
+            "ip": "192.168.2.243",
             "read_port": 1200,
             "write_port": 1201
         },
@@ -16,7 +16,6 @@
             "control": {
                 "navigation": "navigation_control",
                 "hitch_fb": "hitch_control",
-                "hitch_rb": "hitch_control",
                 "substate": "substate"
             },
             "monitor": {

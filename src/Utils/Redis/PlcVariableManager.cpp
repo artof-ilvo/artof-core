@@ -21,7 +21,7 @@ using bprinter::TablePrinter;
 PlcVariableManager::PlcVariableManager(string processName) : 
     VariableManager(processName), 
     monitorSize(0), controlSize(0),
-    byteCount(0), bitCount(0), previousEntity("")
+    byteCount(0), bitCount(0), previousEntity(""), msgWriteCounter(0)
 {
     for(string key: variableMapKeyOrder) {
         VariablePtr var = variableMap[key];
@@ -94,6 +94,7 @@ void PlcVariableManager::setSize(PlcType plcType)
     }
 
     monitorSize += 20; // account for udp header
+    controlSize += 20; // account for udp header
 }
 
 void PlcVariableManager::printRapport(LoggerStream& logger, vector<VariablePtr>& variables)
@@ -142,6 +143,55 @@ void PlcVariableManager::writeControlValuesToPlc()
         controlData[i] = 0;
     }
 
+    // Add header data
+    // The byte sequence for the header (20 bytes total)
+    std::vector<uint8_t> header_bytes = {
+        // NVL UDP identifier (4 bytes)
+        0x00, 0x2d, 0x53, 0x33, 
+        
+        // reserved / flags (4 bytes)
+        0x00, 0x00, 0x00, 0x00, 
+        
+        // publisher ID = 2 (2 bytes - Little Endian or Network Byte Order 02 00? Assuming Little Endian from input: 02 00)
+        0x05, 0x00, 
+        
+        // position = 0 (2 bytes)
+        0x00, 0x00,
+        
+        // number of variables = 1 (2 bytes)
+        0x2D, 0x00, 
+        
+        // length = 82 bytes (header 20 + data [data size]) (2 bytes - Little Endian or Network Byte Order 18 00? Assuming Little Endian from input: 18 00)
+        0x4B, 0x00
+        
+        // Note: The total bytes added is 4 + 4 + 2 + 2 + 2 + 2 = 16 bytes. 
+        // Let's check the input again:
+        // "00 2d 53 33 " - 4 bytes
+        // "00 00 00 00 " - 4 bytes
+        // "02 00 " - 2 bytes
+        // "00 00 " - 2 bytes
+        // "01 00 " - 2 bytes
+        // "18 00" - 2 bytes
+        // TOTAL = 16 bytes.
+        
+        // **Correction based on common protocol headers:** // Your input string seems to be missing 4 bytes to reach the common 20-byte header length. 
+        // Based on the provided hex stream, the total is 16 bytes. 
+        // I will use the 16 bytes provided.
+        // If the header *should* be 20 bytes, you'd need to add two more 2-byte fields (4 bytes total).
+    };
+    std::memcpy(controlData, header_bytes.data(), header_bytes.size());
+
+    // Add counter (still part of the header)
+    uint32_t val = msgWriteCounter;
+    unsigned char *val_char = reinterpret_cast<unsigned char*>(&val);
+    controlData[16] = (unsigned char) (*val_char & 0xFF);
+    controlData[17] = (unsigned char) ((*val_char >> 8) & 0xFF);
+    controlData[18] = (unsigned char) ((*val_char >> 16) & 0xFF);
+    controlData[19] = (unsigned char) ((*val_char >> 24) & 0xFF);
+    // increase message counter
+    msgWriteCounter = (msgWriteCounter + 1) % std::numeric_limits<uint32_t>::max();
+
+    // Continue with data
     resetCount();
     for (VariablePtr var: plcControlVariables) {
         beginCount(var);
@@ -158,47 +208,47 @@ void PlcVariableManager::writeControlValuesToPlc()
         } else if (var->getType() == "int16") {
             int16_t val = var->getValue<int>();
             unsigned char *val_char = reinterpret_cast<unsigned char*>(&val);
-            controlData[byteCount+1] = (unsigned char) (*val_char & 0xFF);
-            controlData[byteCount+0] = (unsigned char) ((*val_char >> 8) & 0xFF);
+            controlData[byteCount+0] = (unsigned char) (*val_char & 0xFF);
+            controlData[byteCount+1] = (unsigned char) ((*val_char >> 8) & 0xFF);
         } else if (var->getType() == "uint16") {
             uint16_t val = var->getValue<int>();
             unsigned char *val_char = reinterpret_cast<unsigned char*>(&val);
-            controlData[byteCount+1] = (unsigned char) (*val_char & 0xFF);
-            controlData[byteCount+0] = (unsigned char) ((*val_char >> 8) & 0xFF);
+            controlData[byteCount+0] = (unsigned char) (*val_char & 0xFF);
+            controlData[byteCount+1] = (unsigned char) ((*val_char >> 8) & 0xFF);
         } else if (var->getType() == "int32") {
             int32_t val = var->getValue<int>();
             unsigned char *val_char = reinterpret_cast<unsigned char*>(&val);
-            controlData[byteCount+3] = (unsigned char) (*val_char & 0xFF);
-            controlData[byteCount+2] = (unsigned char) ((*val_char >> 8) & 0xFF);
-            controlData[byteCount+1] = (unsigned char) ((*val_char >> 16) & 0xFF);
-            controlData[byteCount+0] = (unsigned char) ((*val_char >> 24) & 0xFF);
+            controlData[byteCount+0] = (unsigned char) (*val_char & 0xFF);
+            controlData[byteCount+1] = (unsigned char) ((*val_char >> 8) & 0xFF);
+            controlData[byteCount+2] = (unsigned char) ((*val_char >> 16) & 0xFF);
+            controlData[byteCount+3] = (unsigned char) ((*val_char >> 24) & 0xFF);
         } else if (var->getType() == "uint32") {
             uint32_t val = var->getValue<uint>();
             unsigned char *val_char = reinterpret_cast<unsigned char*>(&val);
-            controlData[byteCount+3] = (unsigned char) (*val_char & 0xFF);
-            controlData[byteCount+2] = (unsigned char) ((*val_char >> 8) & 0xFF);
-            controlData[byteCount+1] = (unsigned char) ((*val_char >> 16) & 0xFF);
-            controlData[byteCount+0] = (unsigned char) ((*val_char >> 24) & 0xFF);
+            controlData[byteCount+0] = (unsigned char) (*val_char & 0xFF);
+            controlData[byteCount+1] = (unsigned char) ((*val_char >> 8) & 0xFF);
+            controlData[byteCount+2] = (unsigned char) ((*val_char >> 16) & 0xFF);
+            controlData[byteCount+3] = (unsigned char) ((*val_char >> 24) & 0xFF);
         } else if (var->getType() == "float") {
             double value = var->getValue<double>();
             IEEE_754::_2008::Binary<32> val(value);
             unsigned char *val_char = reinterpret_cast<unsigned char*>(&val);
-            controlData[byteCount+3] = (unsigned char) val_char[0];
-            controlData[byteCount+2] = (unsigned char) val_char[1];
-            controlData[byteCount+1] = (unsigned char) val_char[2];
-            controlData[byteCount+0] = (unsigned char) val_char[3];
+            controlData[byteCount+0] = (unsigned char) val_char[0];
+            controlData[byteCount+1] = (unsigned char) val_char[1];
+            controlData[byteCount+2] = (unsigned char) val_char[2];
+            controlData[byteCount+3] = (unsigned char) val_char[3];
         } else if (var->getType() == "lfloat") {
             double value = var->getValue<double>();
             IEEE_754::_2008::Binary<64> val(value);
             unsigned char *val_char = reinterpret_cast<unsigned char*>(&val);
-            controlData[byteCount+7] = (unsigned char) val_char[0];
-            controlData[byteCount+6] = (unsigned char) val_char[1];
-            controlData[byteCount+5] = (unsigned char) val_char[2];
-            controlData[byteCount+4] = (unsigned char) val_char[3];
-            controlData[byteCount+3] = (unsigned char) val_char[4];
-            controlData[byteCount+2] = (unsigned char) val_char[5];
-            controlData[byteCount+1] = (unsigned char) val_char[6];
-            controlData[byteCount+0] = (unsigned char) val_char[7];
+            controlData[byteCount+0] = (unsigned char) val_char[0];
+            controlData[byteCount+1] = (unsigned char) val_char[1];
+            controlData[byteCount+2] = (unsigned char) val_char[2];
+            controlData[byteCount+3] = (unsigned char) val_char[3];
+            controlData[byteCount+4] = (unsigned char) val_char[4];
+            controlData[byteCount+5] = (unsigned char) val_char[5];
+            controlData[byteCount+6] = (unsigned char) val_char[6];
+            controlData[byteCount+7] = (unsigned char) val_char[7];
         } else if (var->getType() == "string") {
             string val = var->getValue<string>();
             unsigned char* val_char = reinterpret_cast<unsigned char*>(&val);
@@ -206,11 +256,12 @@ void PlcVariableManager::writeControlValuesToPlc()
         } else if (var->getType() == "bool") {
             int val = var->getValue<bool>();
             unsigned char *val_char = reinterpret_cast<unsigned char*>(&val);
+            controlData[byteCount+0] = (unsigned char) (*val_char & 0xFF);
 
-            unsigned char plcval_curr = controlData[byteCount];
-            unsigned char plcval_write = (((*val_char) << bitCount) & 0xFF);
+            // unsigned char plcval_curr = controlData[byteCount];
+            // unsigned char plcval_write = (((*val_char) << bitCount) & 0xFF);
             
-            controlData[byteCount+0] = plcval_write | plcval_curr;
+            // controlData[byteCount+0] = plcval_write | plcval_curr;
         } else {
             throw PlcNoSuchDataTypeException(var);
         }
@@ -316,7 +367,7 @@ void PlcVariableManager::init()
 void PlcVariableManager::serverTick() 
 {
     if (plcPtr->connected()) {
-        // writeControlValuesToPlc();
+        writeControlValuesToPlc();
         readMonitorValuesFromPlc();
     } else {
         throw PlcNotFound(plcPtr->getIp());
