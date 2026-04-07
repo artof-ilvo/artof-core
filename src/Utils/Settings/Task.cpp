@@ -89,7 +89,9 @@ void Task::initVariant(PointData& f)
         geometryType = GeometryType::POLYGONS;
         vector<PolygonPtr> vec;
         for (int i = 0; i < f.getNumSeries(); i++) {
-            vec.push_back(make_shared<Polygon>(f.getPoints(i)));
+            double rate = f.getFieldByName<double>("rate");
+            PolygonPtr p = make_shared<Polygon>(f.getPoints(i), rate);
+            vec.push_back(p);
         }
         PolygonVector geometries(vec);
         this->polygons = geometries;
@@ -240,13 +242,13 @@ bool Task::updateSections(VariableManager* manager, bool disable)
         auto section = implement.getSections().at(i);
         string name = "plc.control." + hitch.getEntityName() + ".activate_sections." + to_string(i);
         if (getImplement().worksOnTaskmap()) {
-            section->setActive(insideTaskMap(section, disable));
-            manager->getVariable(name)->setValue<int>((int) section->getActive());
+            section->setRate(insideTaskMap(section, disable));
+            manager->getVariable(name)->setValue<int>(section->getRate());
         } else {
             bool active = manager->getVariable(name)->getValue<bool>();
-            section->setActive(active);
+            section->setRate(active);
         }
-        if (section->getActive()) {
+        if (section->getRate()) {
             activeSections = true;
         }
     }
@@ -273,7 +275,7 @@ void Task::activateSection(string id, bool value)
 {
     for (auto section: implement.getSections()) {
         if (section->id.compare(id) == 0) {
-            section->setActive(value);
+            section->setRate(value);
         }
     }
 }
@@ -324,7 +326,7 @@ bool Task::insideTaskMap(Point point, bool disable)
         return false;
     }
 
-    return false;
+    return 0;
 }
 
 bool Task::hitchInTaskMap()

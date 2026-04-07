@@ -36,7 +36,7 @@ void NavigationControl::reset() {
     purepursuitController.reset();  // reset the purepursuit controllers
 }
 
-bool NavigationControl::getActiveSideways() const {
+bool NavigationControl::getRateSideways() const {
     return algorithm.fsmState == CREEP_SIDEWAYS;
 }
 
@@ -617,7 +617,7 @@ void NavigationControl::setVelocityOperation(double longitudinalVelocity, double
     manager->getVariable("plc.control.navigation.velocity.angular")->setValue<double>(omega);
 
     if (manager->getPlatform().navModesContainsId(AlgorithmMode::PP_SPINNING_180)) {
-        manager->getVariable("plc.control.navigation.sideways")->setValue<bool>(getActiveSideways());
+        manager->getVariable("plc.control.navigation.sideways")->setValue<bool>(getRateSideways());
         manager->getVariable("plc.control.navigation.velocity.lateral")->setValue<double>(lateralVelocity);
     } else {
         manager->getVariable("plc.control.navigation.sideways")->setValue<bool>(false);

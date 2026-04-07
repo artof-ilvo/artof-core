@@ -412,7 +412,7 @@ bool Traject::insideFirstTask(Point point)
 bool Traject::insideAnyTask(Point point)
 {
     for (Task& task: field->getTasks()) {
-        if(task.insideTaskMap(point)) {
+        if(task.insideTaskMap(point) != 0) {
             return true;
         }
     }

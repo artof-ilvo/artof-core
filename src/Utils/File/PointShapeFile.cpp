@@ -66,22 +66,22 @@ void PointShapeFile::loadDbfFields(DBFHandle dbfHandle, int i)
         switch(fieldType) {
             case FTString:
             {
-                this->metadata[i].push_back(make_shared<ShapeFieldData>(fieldName, DBFReadStringAttribute(dbfHandle, i, f)));
+                this->metadata.push_back(make_shared<ShapeFieldData>(fieldName, DBFReadStringAttribute(dbfHandle, i, f)));
                 break; 
             }
             case FTInteger:
             {
-                this->metadata[i].push_back(make_shared<ShapeFieldData>(fieldName, DBFReadIntegerAttribute(dbfHandle, i, f)));
+                this->metadata.push_back(make_shared<ShapeFieldData>(fieldName, DBFReadIntegerAttribute(dbfHandle, i, f)));
                 break; 
             }
             case FTDouble:
             {
-                this->metadata[i].push_back(make_shared<ShapeFieldData>(fieldName, DBFReadDoubleAttribute(dbfHandle, i, f)));
+                this->metadata.push_back(make_shared<ShapeFieldData>(fieldName, DBFReadDoubleAttribute(dbfHandle, i, f)));
                 break; 
             }
             case FTLogical:
             {
-                this->metadata[i].push_back(make_shared<ShapeFieldData>(fieldName, DBFReadLogicalAttribute(dbfHandle, i, f)));
+                this->metadata.push_back(make_shared<ShapeFieldData>(fieldName, DBFReadLogicalAttribute(dbfHandle, i, f)));
                 break; 
             }
         }
@@ -160,6 +160,7 @@ void PointShapeFile::readShapefile()
                 // read in the shape vertices
                 for (int v = 0; v < psShape->nVertices; v++)
                 {
+                    DBFReadIntegerAttribute(dbfHandle, v, 0);
                     double x = (psShape->padfX)[v];
                     double y = (psShape->padfY)[v];
                     // if x y values are in xE[-180,+180] and yE[-90,+90]

@@ -100,7 +100,7 @@ void ImplementControl::reset()
 
 void ImplementControl::updateHitch(Task& task) {
     string entityName = task.getHitch().getEntityName();
-    bool active = false;
+    int active = false;
     bool foundImplementOperation = false;
     for (string operationType: continuousOperationTypes) {
         if (traject->getField().hasTaskWithTypeOnHitch(operationType, task.getHitch().name)) {

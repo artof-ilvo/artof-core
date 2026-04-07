@@ -10,7 +10,7 @@ using namespace nlohmann;
 using namespace std;
 
 Section::Section(string id, double width, double up, double down, double link_length, TransformMatrix parallel_transform) : 
-    id(id), width(width), active(false), up(up), down(down), link_length(link_length), parallel_transform(parallel_transform), parallel_angle(0.0)
+    id(id), width(width), rate(0), up(up), down(down), link_length(link_length), parallel_transform(parallel_transform), parallel_angle(0.0)
 {}
 
 Section::Section(Section& section) : 
@@ -31,8 +31,8 @@ Section::Section(json j) :
     if (j.contains("down")) down = j["down"];
     else throw SettingsParamNotFoundException("section", "down");
 
-    if (j.contains("active")) active = j["active"];
-    else active = false;
+    if (j.contains("rate")) rate = j["rate"];
+    else rate = 0;
 
     // No obligatory fields
     if (j.contains("repeats")) {
@@ -77,14 +77,14 @@ double Section::getParallelAngle()
     return parallel_angle;
 }
 
-void Section::setActive(bool active)
+void Section::setRate(uint8_t rate)
 {
-    this->active = active;
+    this->rate = rate;
 }
 
-bool Section::getActive()
+uint8_t Section::getRate()
 {
-    return active;
+    return rate;
 }
 
 void Section::clearActivationGeometry()
@@ -113,7 +113,7 @@ void Section::setActivationGeometry(PolygonPtr g)
 
 void Section::reset()
 {
-    active = false;
+    rate = 0;
 }
 
 json Section::prepareJson() const
@@ -124,7 +124,7 @@ json Section::prepareJson() const
     j["up"] = up;
     j["down"] = down;
     j["parallel_angle"] = parallel_angle;
-    j["active"] = active;
+    j["rate"] = rate;
     j["activation_geometry"] = json::array();
     for (auto p: activation_geometry_points) {
         j["activation_geometry"].push_back(p->toJson());
@@ -146,7 +146,7 @@ nlohmann::json Section::visualizeJson(int zone) const
     j["latlng"] = robotLatLng;
     j["xy"] = robotXY;
     j["id"] = id;
-    j["active"] = active;
+    j["rate"] = rate;
 
     return j;
 }

@@ -35,10 +35,13 @@ namespace Geometry {
     {  
     private:
         bgPolygon2D p;
+        double rate;
     public:
         Polygon() = default;
         Polygon(std::vector<PointPtr> points);
         Polygon(std::vector<Point> points);
+        Polygon(std::vector<PointPtr> points, double rate);
+        Polygon(std::vector<Point> points, double rate);
         ~Polygon() = default;
         
         // virtual functions of Geometry

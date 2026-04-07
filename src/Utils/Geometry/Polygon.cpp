@@ -25,6 +25,17 @@ Polygon::Polygon(vector<Point> points)
     }
 } 
 
+Polygon::Polygon(vector<PointPtr> points, double rate): Polygon(points)
+{
+    this->rate = rate;
+}
+
+Polygon::Polygon(std::vector<Point> points, double rate): Polygon(points)
+{
+    this->rate = rate;
+}   
+
+
 Point Polygon::center() const
 {
     bgPoint2D c;
