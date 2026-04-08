@@ -44,6 +44,8 @@ BOOST_AUTO_TEST_CASE( testMultiPolygon )
     std::cout << "Polygon: " << (polygon ? "true" : "false") << std::endl;
     std::cout << f << std::endl;
     BOOST_TEST(true == f.isPolygon(0));
+    BOOST_TEST(f.getFieldByName<double>(0, "rate") == 200.0);
+    BOOST_TEST(f.getFieldByName<double>(1, "rate") == 50.0);
 }
 
 BOOST_AUTO_TEST_CASE( testPolygon )
@@ -60,6 +62,7 @@ BOOST_AUTO_TEST_CASE( testPolygon )
     std::cout << "Polygon: " << (polygon ? "true" : "false") << std::endl;
     std::cout << f << std::endl;
     BOOST_TEST(true == f.isPolygon(0));
+    BOOST_TEST(f.getFieldByName<double>(0, "rate") == 150.0);
 }
 
 

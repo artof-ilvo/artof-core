@@ -49,7 +49,7 @@ namespace File {
     protected:
         bool polygon;
         std::vector<std::vector<Geometry::PointPtr>> series;
-        std::vector<ShapeFieldDataPtr> metadata;
+        std::vector<std::vector<ShapeFieldDataPtr>> metadata;
     public:
         PointData(bool polygon);
         ~PointData() = default;
@@ -65,20 +65,20 @@ namespace File {
         bool isPolygon(uint i);
 
         template<class T>
-        T getFieldByName(std::string name) {
-            for (ShapeFieldDataPtr field: this->metadata) {
+        T getFieldByName(uint series, std::string name) {
+            for (ShapeFieldDataPtr field: this->metadata[series]) {
                 if (field->name.compare(name) == 0) {
-                    if (field->type == ShapeFieldType::INT && std::is_same<T, int>::value) {
-                        return field->i;
-                    } else if (field->type == ShapeFieldType::BOOL && std::is_same<T, bool>::value) {
-                        return field->b;
-                    } else if (field->type == ShapeFieldType::DOUBLE && std::is_same<T, double>::value) {
-                        return field->d;
-                    } else if (field->type == ShapeFieldType::STRING && std::is_same<T, std::string>::value) {
-                        return field->s;
-                    } else {
-                        throw std::runtime_error("Requested type does not match field type");
+                    if constexpr (std::is_same<T, int>::value) {
+                        if (field->type == ShapeFieldType::INT) return field->i;
+                    } else if constexpr (std::is_same<T, bool>::value) {
+                        if (field->type == ShapeFieldType::BOOL) return field->b;
+                    } else if constexpr (std::is_same<T, double>::value) {
+                        if (field->type == ShapeFieldType::DOUBLE) return field->d;
+                        if (field->type == ShapeFieldType::INT) return static_cast<double>(field->i);
+                    } else if constexpr (std::is_same<T, std::string>::value) {
+                        if (field->type == ShapeFieldType::STRING) return field->s;
                     }
+                    throw std::runtime_error("Requested type does not match field type for field: " + name);
                 }
             }
             throw std::runtime_error("Field with name " + name + " not found");

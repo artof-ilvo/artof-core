@@ -89,7 +89,7 @@ void Task::initVariant(PointData& f)
         geometryType = GeometryType::POLYGONS;
         vector<PolygonPtr> vec;
         for (int i = 0; i < f.getNumSeries(); i++) {
-            double rate = f.getFieldByName<double>("rate");
+            double rate = f.getFieldByName<double>(i, "rate");
             PolygonPtr p = make_shared<Polygon>(f.getPoints(i), rate);
             vec.push_back(p);
         }
@@ -280,38 +280,37 @@ void Task::activateSection(string id, bool value)
     }
 }
 
-bool Task::insideTaskMap(shared_ptr<Section> section, bool disable)
+uint8_t Task::insideTaskMap(shared_ptr<Section> section, bool disable)
 {
     const Polygon& polygonSection = section->getPolygon();
     Point currentPosition(section->getState().getT().asVector());
     section->clearActivationGeometry();
 
-    if (type.compare("continuous") == 0) { 
-        for (PolygonPtr polygon: get<PolygonVector>(polygons)) { 
+    if (type.compare("continuous") == 0) {
+        for (PolygonPtr polygon: get<PolygonVector>(polygons)) {
             if (overlaps(polygonSection.geometry(), polygon->geometry()) || covered_by(polygonSection.geometry(), polygon->geometry())) {
                 section->setActivationGeometry(polygon);
-                return !disable;
+                return disable ? 0 : static_cast<uint8_t>(polygon->getRate());
             }
-        }     
+        }
     } else if (type.compare("cardan") == 0) {
-        for (PolygonPtr polygon: get<PolygonVector>(polygons)) { 
+        for (PolygonPtr polygon: get<PolygonVector>(polygons)) {
             if (overlaps(polygonSection.geometry(), polygon->geometry()) || covered_by(polygonSection.geometry(), polygon->geometry())) {
-                // section->setActivationGeometry(polygon);
-                return !disable;
+                return disable ? 0 : 1;
             }
-        } 
+        }
     } else if (type.compare("intermittent") == 0) {
         PointVector vec = get<PointVector>(points);
         std::vector<PointPtr> points = vec.nearby(currentPosition, 40);
         for (PointPtr point: points) {
             if (covered_by(point->geometry(), polygonSection.geometry())) {
                 section->addActivationGeometry(point);
-                return !disable;
+                return disable ? 0 : 1;
             }
-        }   
+        }
     }
 
-    return false;
+    return 0;
 }
 
 bool Task::insideTaskMap(Point point, bool disable)

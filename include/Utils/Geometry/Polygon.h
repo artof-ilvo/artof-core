@@ -35,7 +35,7 @@ namespace Geometry {
     {  
     private:
         bgPolygon2D p;
-        double rate;
+        double rate = 0.0;
     public:
         Polygon() = default;
         Polygon(std::vector<PointPtr> points);
@@ -50,6 +50,7 @@ namespace Geometry {
         void update(Settings::TransformMatrix matrix, double width, double height);
         void update(Settings::TransformMatrix matrix, double width, double up, double down);
 
+        double getRate() const;
         const bgPolygon2D& geometry() const;
         nlohmann::json toJson() const;
 

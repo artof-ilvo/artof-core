@@ -36,6 +36,11 @@ Polygon::Polygon(std::vector<Point> points, double rate): Polygon(points)
 }   
 
 
+double Polygon::getRate() const
+{
+    return rate;
+}
+
 Point Polygon::center() const
 {
     bgPoint2D c;
