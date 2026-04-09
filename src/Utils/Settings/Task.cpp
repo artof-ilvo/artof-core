@@ -89,7 +89,8 @@ void Task::initVariant(PointData& f)
         geometryType = GeometryType::POLYGONS;
         vector<PolygonPtr> vec;
         for (int i = 0; i < f.getNumSeries(); i++) {
-            double rate = f.getFieldByName<double>(i, "rate");
+            double rate = 1.0;
+            try { rate = f.getFieldByName<double>(i, "rate"); } catch (const std::runtime_error&) {}
             PolygonPtr p = make_shared<Polygon>(f.getPoints(i), rate);
             vec.push_back(p);
         }
