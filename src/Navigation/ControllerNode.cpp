@@ -27,6 +27,8 @@ Eigen::Vector3d Ilvo::Core::ControllerNode::update(SensorNode& sensor)
     // 1. Get parameters from redis
 
     // 2. Get offset from sensor
+    
+    // 3. calcate the offset (lateral and orientation) to the trajectory
 
     // 3. run algorithm
     Eigen::Vector3d commands;
