@@ -74,7 +74,7 @@ namespace Settings {
 
         bool hitchInTaskMap();
         bool insideTaskMap(Geometry::Point point, bool disable=false);
-        bool insideTaskMap(std::shared_ptr<Section> section, bool disable=false);
+        uint8_t insideTaskMap(std::shared_ptr<Section> section, bool disable=false);
 
         Hitch& getHitch();
         bool onHitch(std::string name);

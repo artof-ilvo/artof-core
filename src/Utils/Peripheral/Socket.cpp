@@ -39,7 +39,7 @@ bool Socket::openFd() {
        
     // retreive sin_addr of serv_addr
     boost::system::error_code ec;
-    ip::address::from_string(host, ec);
+    auto addr = ip::make_address(host, ec);
     if (ec) { // handle address as hostname
         struct hostent *he;
         if(!(he=gethostbyname(host.c_str()))) {
@@ -49,11 +49,12 @@ bool Socket::openFd() {
         serv_addr.sin_addr = *((struct in_addr *)he->h_addr);
         memset(&(serv_addr.sin_zero), '\0', 8);
     } else { // handle address as host address
-        // Convert IPv4 and IPv6 addresses from text to binary form 
-        if(inet_pton(AF_INET, host.c_str(), &serv_addr.sin_addr)<=0) { 
-            LoggerStream::getInstance() << WARN << "Invalid address/ Address not supported."; 
-            return false; 
-        } 
+        if (!addr.is_v4()) {
+            LoggerStream::getInstance() << WARN << "Invalid address/ Address not supported.";
+            return false;
+        }
+        auto bytes = addr.to_v4().to_bytes();
+        memcpy(&serv_addr.sin_addr, bytes.data(), bytes.size());
     }
 
     // Set connection timeout to 10 seconds

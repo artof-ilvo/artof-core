@@ -63,6 +63,26 @@ namespace File {
         int getNumPoints(uint i);
         int getNumFields(uint i);
         bool isPolygon(uint i);
+
+        template<class T>
+        T getFieldByName(uint series, std::string name) {
+            for (ShapeFieldDataPtr field: this->metadata[series]) {
+                if (field->name.compare(name) == 0) {
+                    if constexpr (std::is_same<T, int>::value) {
+                        if (field->type == ShapeFieldType::INT) return field->i;
+                    } else if constexpr (std::is_same<T, bool>::value) {
+                        if (field->type == ShapeFieldType::BOOL) return field->b;
+                    } else if constexpr (std::is_same<T, double>::value) {
+                        if (field->type == ShapeFieldType::DOUBLE) return field->d;
+                        if (field->type == ShapeFieldType::INT) return static_cast<double>(field->i);
+                    } else if constexpr (std::is_same<T, std::string>::value) {
+                        if (field->type == ShapeFieldType::STRING) return field->s;
+                    }
+                    throw std::runtime_error("Requested type does not match field type for field: " + name);
+                }
+            }
+            throw std::runtime_error("Field with name " + name + " not found");
+        }
     };
 
     inline std::ostream & operator<<(std::ostream & str, PointData& data) { 

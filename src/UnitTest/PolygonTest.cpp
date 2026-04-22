@@ -55,4 +55,21 @@ BOOST_AUTO_TEST_CASE( polygon2 )
 }
 
 
+BOOST_AUTO_TEST_CASE( polygon_rate )
+{
+    // Arrange
+    vector<PointPtr> pointdata = vector<PointPtr>();
+    pointdata.push_back(std::make_shared<Point>(0.0, 0.0));
+    pointdata.push_back(std::make_shared<Point>(0.0, 1.0));
+    pointdata.push_back(std::make_shared<Point>(1.0, 1.0));
+    pointdata.push_back(std::make_shared<Point>(1.0, 0.0));
+    pointdata.push_back(std::make_shared<Point>(0.0, 0.0));
+
+    Polygon polygonWithRate(pointdata, 150.0);
+    Polygon polygonNoRate(pointdata);
+    // Assert
+    BOOST_TEST(polygonWithRate.getRate() == 150.0);
+    BOOST_TEST(polygonNoRate.getRate() == 0.0);
+}
+
 BOOST_AUTO_TEST_SUITE_END()

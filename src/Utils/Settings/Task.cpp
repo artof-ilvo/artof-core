@@ -89,7 +89,10 @@ void Task::initVariant(PointData& f)
         geometryType = GeometryType::POLYGONS;
         vector<PolygonPtr> vec;
         for (int i = 0; i < f.getNumSeries(); i++) {
-            vec.push_back(make_shared<Polygon>(f.getPoints(i)));
+            double rate = 1.0;
+            try { rate = f.getFieldByName<double>(i, "rate"); } catch (const std::runtime_error&) {}
+            PolygonPtr p = make_shared<Polygon>(f.getPoints(i), rate);
+            vec.push_back(p);
         }
         PolygonVector geometries(vec);
         this->polygons = geometries;
@@ -240,13 +243,13 @@ bool Task::updateSections(VariableManager* manager, bool disable)
         auto section = implement.getSections().at(i);
         string name = "plc.control." + hitch.getEntityName() + ".activate_sections." + to_string(i);
         if (getImplement().worksOnTaskmap()) {
-            section->setActive(insideTaskMap(section, disable));
-            manager->getVariable(name)->setValue<int>((int) section->getActive());
+            section->setRate(insideTaskMap(section, disable));
+            manager->getVariable(name)->setValue<int>(section->getRate());
         } else {
             bool active = manager->getVariable(name)->getValue<bool>();
-            section->setActive(active);
+            section->setRate(active);
         }
-        if (section->getActive()) {
+        if (section->getRate()) {
             activeSections = true;
         }
     }
@@ -273,43 +276,42 @@ void Task::activateSection(string id, bool value)
 {
     for (auto section: implement.getSections()) {
         if (section->id.compare(id) == 0) {
-            section->setActive(value);
+            section->setRate(value);
         }
     }
 }
 
-bool Task::insideTaskMap(shared_ptr<Section> section, bool disable)
+uint8_t Task::insideTaskMap(shared_ptr<Section> section, bool disable)
 {
     const Polygon& polygonSection = section->getPolygon();
     Point currentPosition(section->getState().getT().asVector());
     section->clearActivationGeometry();
 
-    if (type.compare("continuous") == 0) { 
-        for (PolygonPtr polygon: get<PolygonVector>(polygons)) { 
+    if (type.compare("continuous") == 0) {
+        for (PolygonPtr polygon: get<PolygonVector>(polygons)) {
             if (overlaps(polygonSection.geometry(), polygon->geometry()) || covered_by(polygonSection.geometry(), polygon->geometry())) {
                 section->setActivationGeometry(polygon);
-                return !disable;
+                return disable ? 0 : static_cast<uint8_t>(polygon->getRate());
             }
-        }     
+        }
     } else if (type.compare("cardan") == 0) {
-        for (PolygonPtr polygon: get<PolygonVector>(polygons)) { 
+        for (PolygonPtr polygon: get<PolygonVector>(polygons)) {
             if (overlaps(polygonSection.geometry(), polygon->geometry()) || covered_by(polygonSection.geometry(), polygon->geometry())) {
-                // section->setActivationGeometry(polygon);
-                return !disable;
+                return disable ? 0 : 1;
             }
-        } 
+        }
     } else if (type.compare("intermittent") == 0) {
         PointVector vec = get<PointVector>(points);
         std::vector<PointPtr> points = vec.nearby(currentPosition, 40);
         for (PointPtr point: points) {
             if (covered_by(point->geometry(), polygonSection.geometry())) {
                 section->addActivationGeometry(point);
-                return !disable;
+                return disable ? 0 : 1;
             }
-        }   
+        }
     }
 
-    return false;
+    return 0;
 }
 
 bool Task::insideTaskMap(Point point, bool disable)
@@ -324,7 +326,7 @@ bool Task::insideTaskMap(Point point, bool disable)
         return false;
     }
 
-    return false;
+    return 0;
 }
 
 bool Task::hitchInTaskMap()

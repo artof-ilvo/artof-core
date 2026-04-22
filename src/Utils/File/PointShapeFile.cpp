@@ -67,17 +67,17 @@ void PointShapeFile::loadDbfFields(DBFHandle dbfHandle, int i)
             case FTString:
             {
                 this->metadata[i].push_back(make_shared<ShapeFieldData>(fieldName, DBFReadStringAttribute(dbfHandle, i, f)));
-                break; 
+                break;
             }
             case FTInteger:
             {
                 this->metadata[i].push_back(make_shared<ShapeFieldData>(fieldName, DBFReadIntegerAttribute(dbfHandle, i, f)));
-                break; 
+                break;
             }
             case FTDouble:
             {
                 this->metadata[i].push_back(make_shared<ShapeFieldData>(fieldName, DBFReadDoubleAttribute(dbfHandle, i, f)));
-                break; 
+                break;
             }
             case FTLogical:
             {

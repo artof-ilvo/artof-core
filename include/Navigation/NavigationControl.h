@@ -132,7 +132,7 @@ namespace Core {
          * @return true: the robot is driving sideways
          * @return false: the robot is not driving sideways
          */
-        bool getActiveSideways() const;
+        bool getRateSideways() const;
         const Utils::Settings::AlgorithmData& getAlgorithmData();
     };
 
