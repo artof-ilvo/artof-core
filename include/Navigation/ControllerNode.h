@@ -2,8 +2,8 @@
 
 #include <map>
 #include <string>
-#include <SensorNode.h>
-#include <Eigen/Dense>
+#include <Navigation/SensorNode.h>
+#include <ThirdParty/Eigen/Dense>
 
 namespace Ilvo {
 namespace Core {
@@ -19,7 +19,7 @@ namespace Core {
         double accuracy();
         Eigen::Vector3d update(SensorNode& sensor);
 
-        void runAlgorithm(Eigen::Vector3d& commands, );
+        void runAlgorithm(Eigen::Vector3d& commands, double ofssetOrientation, double offsetLateral);
     };
 }
 }

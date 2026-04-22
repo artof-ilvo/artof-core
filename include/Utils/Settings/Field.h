@@ -47,7 +47,7 @@ namespace Settings {
         Field(std::string name, int zoneId);
         ~Field() = default;
 
-        Field& operator=(const Field& other);
+        // Field& operator=(const Field& other);
 
         const std::vector<Geometry::PointPtr>& getTrajectPoints() const;
         const Geometry::Polygon& getGeofence() const;

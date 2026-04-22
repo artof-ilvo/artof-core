@@ -81,9 +81,17 @@ Field::Field(std::string name, int zoneId) :
     // removes brackets if exists
     removeCharacters(this->name, CHARS_BRACKETS);
 
-    for (json task: fieldInfo["tasks"]) {
-        string taskDirectoryPath = baseFilePath + "/field/" + name + "/tasks";
-        tasks.push_back(Task(taskDirectoryPath, task, gpsZoneId));
+    auto& taskJsonArray = fieldInfo["tasks"];
+    
+    // Allocate space for the specific number of tasks found in JSON
+    tasks.reserve(taskJsonArray.size()); 
+
+    string taskDirectoryPath = baseFilePath + "/field/" + name + "/tasks";
+
+    for (const auto& taskJson : taskJsonArray) {
+        // emplace_back calls the Task constructor directly.
+        // No copy constructor is needed.
+        tasks.emplace_back(taskDirectoryPath, taskJson, gpsZoneId);
     }
 
     // read in files
@@ -127,27 +135,27 @@ Field::Field(std::string name, int zoneId) :
     }
 }
 
-Field& Field::operator=(const Field& other)
-{
-    trajectFilePath = other.trajectFilePath;
-    geofenceFilePath = other.geofenceFilePath;
-    infoFilePath = other.infoFilePath;
+// Field& Field::operator=(const Field& other)
+// {
+//     trajectFilePath = other.trajectFilePath;
+//     geofenceFilePath = other.geofenceFilePath;
+//     infoFilePath = other.infoFilePath;
 
-    baseFilePath = other.baseFilePath;
-    name = other.name;
-    gpsZoneId = other.gpsZoneId;
+//     baseFilePath = other.baseFilePath;
+//     name = other.name;
+//     gpsZoneId = other.gpsZoneId;
 
-    fieldInfo = other.fieldInfo;
-    geofence = other.geofence;
+//     fieldInfo = other.fieldInfo;
+//     geofence = other.geofence;
 
-    tasks.clear();
-    copy(other.tasks.begin(), other.tasks.end(), back_inserter(tasks));
+//     tasks.clear();
+//     copy(other.tasks.begin(), other.tasks.end(), back_inserter(tasks));
 
-    trajectPoints.clear();
-    trajectPoints.insert(trajectPoints.begin(), other.trajectPoints.begin(), other.trajectPoints.end());
+//     trajectPoints.clear();
+//     trajectPoints.insert(trajectPoints.begin(), other.trajectPoints.begin(), other.trajectPoints.end());
 
-    return *this;
-}
+//     return *this;
+// }
 
 const std::vector<PointPtr>& Field::getTrajectPoints() const
 {

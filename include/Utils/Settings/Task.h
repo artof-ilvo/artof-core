@@ -18,6 +18,7 @@
 #include <Utils/Geometry/Point.h>
 #include <Utils/Settings/Platform.h>
 #include <Utils/Settings/Implement.h>
+#include <Utils/Settings/AsAppliedMap.h>
 #include <Utils/File/PointData.h>
 #include <Utils/Redis/VariableManager.h>
 
@@ -51,8 +52,10 @@ namespace Settings {
         std::string type;
         Hitch& hitch;  // keep reference to same hitch instance as in platform
         Implement implement;
+        std::unique_ptr<AsAppliedMap> asAppliedMap;
 
         std::string taskmappath;
+        std::string asAppliedPath;
         GeometryType geometryType;
         std::variant<Geometry::PolygonVector,Geometry::PointVector> polygons, points;
 
@@ -64,6 +67,14 @@ namespace Settings {
     public:
         Task(std::string baseFilePath, nlohmann::json task, int gpsZoneId);
         ~Task() = default;
+
+        // 1. Explicitly delete the Copy Constructor
+        Task(const Task&) = delete;
+        Task& operator=(const Task&) = delete;
+
+        // Explicitly define or default the move constructor with noexcept
+        Task(Task&& other) noexcept = default; 
+        Task& operator=(Task&& other) noexcept = default;
 
         int nextDiscreteImplementIndex;
 

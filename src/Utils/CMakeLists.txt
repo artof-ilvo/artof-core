@@ -62,6 +62,7 @@ target_link_libraries(ilvo-settings-utils PUBLIC
   ${ADDITIONAL_LINK_LIBRARIES}
   ${CMAKE_SOURCE_DIR}/dependencies/${CMAKE_SYSTEM_PROCESSOR}/static/libshp.a
   ilvo-logging-utils
+  GDAL::GDAL
 )
 
 file(GLOB redisUtilFiles

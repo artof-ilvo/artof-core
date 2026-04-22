@@ -57,6 +57,9 @@ Task::Task(string baseFilePath, json j_task, int gpsZoneId) :
             throw PathNotFoundException(taskmappath);
     }
 
+    asAppliedPath = baseFilePath + "/" + name + "/as_applied.tiff";
+    asAppliedMap = std::make_unique<AsAppliedMap>(asAppliedPath);
+
     vector<string> xFields{"Easting", "X"};
     vector<string> yFields{"Northing", "Y"};
     bool polygon = true;
@@ -238,15 +241,20 @@ const vector<IndexPointPtr>& Task::getPathPointsDiscr()
 bool Task::updateSections(VariableManager* manager, bool disable)
 {
     bool activeSections = false;
+    // If present read in the new as applied map.
+    asAppliedMap->update();
 
     for (int i = 0; i < implement.getSections().size(); i++) {
         auto section = implement.getSections().at(i);
+        // Check Overlap with as-applied-map
+
+        // Get sections rate
         string name = "plc.control." + hitch.getEntityName() + ".activate_sections." + to_string(i);
         if (getImplement().worksOnTaskmap()) {
             section->setRate(insideTaskMap(section, disable));
             manager->getVariable(name)->setValue<int>(section->getRate());
         } else {
-            bool active = manager->getVariable(name)->getValue<bool>();
+            bool active = manager->getVariable(name)->getValue<bool>(); // && !asAppliedMap->applied(section->getPolygon());
             section->setRate(active);
         }
         if (section->getRate()) {

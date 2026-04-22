@@ -1,19 +1,17 @@
-#pragma once
+#include <Navigation/SensorNode.h>
+#include <Utils/Settings/Traject.h>
 
-#include <Eigen/Dense>
+using namespace Ilvo::Core;
+using namespace Ilvo::Utils::Settings;
 
-namespace Ilvo {
-namespace Core {
-    class SensorNode
-    {
-    private:
+SensorNode::SensorNode() {}
 
-    public:
-        SensorNode(/* args */);
-        ~SensorNode();
-
-        virtual Eigen::Vector3d getOffset(Traject& traject) = 0;
-        double accuracy();
-    };
+double SensorNode::offset(Traject& traject)
+{
+    return 0.0;
 }
+
+double SensorNode::accuracy()
+{
+    return 0.0;
 }

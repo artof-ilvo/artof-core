@@ -52,6 +52,7 @@ namespace Geometry {
 
         double getRate() const;
         const bgPolygon2D& geometry() const;
+        void envelope(Point& min, Point& max) const;
         nlohmann::json toJson() const;
 
         void contour(std::vector<std::vector<double>>& robotLatLng, std::vector<std::vector<double>>& robotXY, int zone=-1) const;

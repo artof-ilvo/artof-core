@@ -68,6 +68,7 @@ add_definitions("-DBOOST_BIND_GLOBAL_PLACEHOLDERS")
 # Find Package Dependencies
 find_package( Boost REQUIRED filesystem system thread REQUIRED)
 find_package( CURL REQUIRED)
+find_package(GDAL REQUIRED)
 
 set(ADDITIONAL_LINK_LIBRARIES ${ADDITIONAL_LINK_LIBRARIES} 
     ${Boost_LIBRARIES}

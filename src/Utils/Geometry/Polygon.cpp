@@ -59,6 +59,15 @@ const bgPolygon2D& Polygon::geometry() const
     return p;
 }
 
+void Polygon::envelope(Point& min, Point& max) const
+{
+    boost::geometry::model::box<bgPoint2D> box;
+    boost::geometry::envelope(p, box);
+
+    min = Point(box.min_corner().x(), box.min_corner().y());
+    max = Point(box.max_corner().x(), box.max_corner().y());
+}
+
 json Polygon::toJson() const
 {
     json j;
