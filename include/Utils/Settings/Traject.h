@@ -13,6 +13,7 @@
 #include <string>
 #include <vector>
 #include <memory>
+#include <utility>
 #include <stdexcept> // std::runtime_error
 #include <iostream>
 #include <iomanip>
@@ -54,6 +55,8 @@ namespace Settings {
         std::vector<Geometry::PointPtr> skeletonCurvy;
         /** @brief list of corners of the traject */
         std::vector<Geometry::CornerPointPtr> corners;
+        /** @brief segment boundaries in interpolation space: (startIdx, endIdx) per segment */
+        std::vector<std::pair<int,int>> segmentBoundaries;
 
         friend std::ostream& operator<<(std::ostream& os, const Traject& t);
     public:
@@ -68,6 +71,16 @@ namespace Settings {
         const std::vector<Geometry::PointPtr>& getRawPoints() const;
         const std::vector<Geometry::CornerPointPtr>& getCorners() const;
         Field& getField();
+
+        // Returns the segment index for a given interpolation index (-1 if no GeoJSON segments)
+        // lookaheadPoints: anticipate next segment this many interpolation points early
+        int getCurrentSegmentIndex(int interpolationIndex, int lookaheadPoints = 0) const;
+        // Returns true if the traject was loaded from GeoJSON with segment data
+        bool hasSegments() const;
+        // Returns the interpolation [start, end] index range for a given segment index
+        std::pair<int,int> getSegmentBoundary(int segmentIndex) const;
+        // Returns the closest point index on the LINEAR interpolation (for segment boundary comparison)
+        int closestPointIndexLinear(Geometry::Point p) const;
 
         const std::vector<Geometry::PointPtr>& getInterpolation(InterpolationType type=InterpolationType::CURRENT) const;
         InterpolationType getInterpolationType() const;

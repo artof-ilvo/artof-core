@@ -42,6 +42,15 @@ void Traject::load(std::string fieldName, int utmZoneId, double cornerDetectionA
         Arc a;
 
         // ** Clear all old data
+        segmentBoundaries.clear();
+        std::vector<int> segmentRawEndIndices;
+        if (field->hasTrajectSegments()) {
+            auto& segs = field->getTrajectSegments();
+            for (int s = 0; s < segs.getNumSeries(); s++) {
+                segmentRawEndIndices.push_back(s);  // segment s = line raw[s]→raw[s+1]
+            }
+        }
+
         // clear corners and add first point
         corners.clear();
         int cornerIndex = 0;
@@ -104,6 +113,18 @@ void Traject::load(std::string fieldName, int utmZoneId, double cornerDetectionA
                     LoggerStream::getInstance() << DEBUG << *corners.back();
                 }
             }         
+
+            // track segment boundaries for GeoJSON trajectories
+            if (!segmentRawEndIndices.empty()) {
+                int segIdx = 0;
+                for (int endRaw : segmentRawEndIndices) {
+                    if (i == endRaw) {
+                        int startIdx = segIdx == 0 ? 0 : segmentBoundaries.back().second + 1;
+                        segmentBoundaries.push_back({startIdx, (int)interpolationLinear.size() - 1});
+                    }
+                    segIdx++;
+                }
+            }
 
             // update i
             i++;
@@ -498,4 +519,51 @@ json Traject::toJson() const
     j["corners"] = jCorners;
 
     return j;
+}
+
+bool Traject::hasSegments() const
+{
+    return !segmentBoundaries.empty();
+}
+
+std::pair<int,int> Traject::getSegmentBoundary(int segmentIndex) const
+{
+    if (segmentIndex < 0 || segmentIndex >= (int)segmentBoundaries.size())
+        return {0, 0};
+    return segmentBoundaries[segmentIndex];
+}
+
+int Traject::closestPointIndexLinear(Point p) const
+{
+    double minDist = 1e9;
+    int minIdx = 0;
+    for (int i = 0; i < (int)interpolationLinear.size(); i++) {
+        double d = interpolationLinear[i]->distance(p);
+        if (d < minDist) { minDist = d; minIdx = i; }
+    }
+    return minIdx;
+}
+
+int Traject::getCurrentSegmentIndex(int interpolationIndex, int lookaheadPoints /* = 0 */) const
+{
+    if (segmentBoundaries.empty())
+        return -1;
+
+    // Zoek het huidige segment zonder lookahead
+    int currentSeg = (int)segmentBoundaries.size() - 1;
+    for (int i = 0; i < (int)segmentBoundaries.size(); i++) {
+        if (interpolationIndex >= segmentBoundaries[i].first &&
+            interpolationIndex <= segmentBoundaries[i].second) {
+            currentSeg = i;
+            break;
+        }
+    }
+
+    // Kijk maximaal 1 segment vooruit — alleen als we dicht bij het einde zijn
+    if (lookaheadPoints > 0 && currentSeg < (int)segmentBoundaries.size() - 1) {
+        if (interpolationIndex + lookaheadPoints >= segmentBoundaries[currentSeg].second)
+            return currentSeg + 1;
+    }
+
+    return currentSeg;
 }

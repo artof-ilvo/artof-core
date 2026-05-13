@@ -1,5 +1,6 @@
 #include <Navigation/NavigationControl.h>
 #include <Navigation/Navigation.h>
+#include <ThirdParty/json.hpp>
 #include <ThirdParty/bprinter/table_printer.h>
 #include <Exceptions/RobotExceptions.hpp>
 #include <Utils/Settings/Platform.h>
@@ -22,6 +23,10 @@ void NavigationControl::init(Utils::Redis::VariableManager* manager, shared_ptr<
     this->manager = manager;
     this->traject = traject;
     this->position = position;
+    this->lastSegmentIndex = -1;
+    this->maneuverActive = false;
+    this->actualHeading = 0.0;
+    this->btBuilder = std::make_unique<BehaviourTreeBuilder>(manager);
     // set the velocity operation to zero
     setVelocityOperation();
 }
@@ -96,6 +101,115 @@ void NavigationControl::update(AlgorithmMode algorithmMode, bool firstTime) {
         algorithm.velocity.longitudinal = manager->getVariable("plc.monitor.navigation.velocity.longitudinal")->getValue<double>();  // TODO what will become the unit speed check this out
         algorithm.longitudinalTaskVelocity = algorithm.velocity.longitudinal;
     }
+
+    // ** BT: segmentgebaseerde navigatie (enkel bij GeoJSON traject) **
+    if (traject->hasSegments()) { try {
+        // segmentBoundaries are built with LINEAR indices — always use linear for direction lookups
+        const auto& linInterp = traject->getInterpolation(InterpolationType::LINEAR);
+        auto linearSegDir = [&](int idx) -> double {
+            if (idx + 1 >= (int)linInterp.size()) idx = (int)linInterp.size() - 2;
+            return RadToDeg(std::atan2(linInterp[idx+1]->y() - linInterp[idx]->y(),
+                                       linInterp[idx+1]->x() - linInterp[idx]->x()));
+        };
+        double lookaheadDist = manager->existsVariable("pc.bt.lookahead_distance") ?
+            manager->getVariable("pc.bt.lookahead_distance")->getValue<double>() : 2.0;
+        double interpDist = manager->getVariable("pc.purepursuit.inter_point_distance")->getValue<double>();
+        int lookaheadPoints = (int)(lookaheadDist / interpDist);
+        // Use linear closest point index for segment detection — segmentBoundaries are in linear space
+        int linearClosestIdx = traject->closestPointIndexLinear(position->currentPoint);
+        int segmentIndex = traject->getCurrentSegmentIndex(linearClosestIdx, lookaheadPoints);
+
+        double headingThreshold = manager->existsVariable("pc.bt.heading_threshold") ?
+            manager->getVariable("pc.bt.heading_threshold")->getValue<double>() : 45.0;
+
+        // Bereken de werkelijke rijrichting uit GPS-verplaatsing (onafhankelijk van trajectreferentie)
+        double dx = position->currentPoint.x() - prevPosition.x();
+        double dy = position->currentPoint.y() - prevPosition.y();
+        double movedDist = std::sqrt(dx*dx + dy*dy);
+        if (movedDist > 0.05) {  // alleen updaten bij voldoende verplaatsing (ruis filteren)
+            actualHeading = RadToDeg(std::atan2(dy, dx));
+            prevPosition = position->currentPoint;
+        }
+        double robotHeading = actualHeading;
+        manager->getStream().setRedisValue("pc.bt.robot_heading", to_string(robotHeading));
+
+        // Determine effective segment
+        int effectiveSegmentIndex = (lastSegmentIndex >= 0) ? lastSegmentIndex : segmentIndex;
+        if (lastSegmentIndex >= 0 && segmentIndex > lastSegmentIndex) {
+            int nextSeg = lastSegmentIndex + 1;
+            if (maneuverActive) {
+                // Locked: only advance when robot is aligned with the next segment's entry direction
+                int entryIdx = traject->getSegmentBoundary(nextSeg).first;
+                double nextDir = linearSegDir(entryIdx);
+                double headingDiff = calcSmallestAngleAbsolute(nextDir, robotHeading);
+                manager->getStream().setRedisValue("pc.bt.heading_diff", to_string(headingDiff));
+                if (headingDiff < headingThreshold) {
+                    effectiveSegmentIndex = nextSeg;
+                    maneuverActive = false;
+                    LoggerStream::getInstance() << INFO << "Maneuver complete, advancing to segment " << nextSeg;
+                }
+                // else: stay locked
+            } else {
+                // Free advancement: allow entering the next segment
+                effectiveSegmentIndex = nextSeg;
+            }
+        }
+
+        // Debug values naar redis
+        manager->getStream().setRedisValue("pc.bt.segment_index", to_string(effectiveSegmentIndex));
+        manager->getStream().setRedisValue("pc.bt.raw_segment_index", to_string(segmentIndex));
+        manager->getStream().setRedisValue("pc.bt.closest_point_index", to_string(linearClosestIdx));
+        manager->getStream().setRedisValue("pc.bt.has_segments", "1");
+        manager->getStream().setRedisValue("pc.bt.maneuver_active", maneuverActive ? "1" : "0");
+        manager->getStream().setRedisValue("pc.bt.robot_heading", to_string(robotHeading));
+
+        // Bouw BT opnieuw als segment is gewisseld
+        if (effectiveSegmentIndex != lastSegmentIndex && effectiveSegmentIndex >= 0) {
+            int prevSeg = lastSegmentIndex;
+            lastSegmentIndex = effectiveSegmentIndex;
+            segmentIndex = effectiveSegmentIndex;
+
+            // Detecteer manoeuver: groot richtingsverschil tussen vorig en volgend segment
+            // Lock wanneer robot bij het betreden van dit segment NIET aligned is met de segmentrichting.
+            // Swath: robot rijdt al in de swath-richting bij binnenkomst → geen lock.
+            // Headland: robot rijdt nog in swath-richting bij binnenkomst → lock tot aligned met volgende swath.
+            double currentSegDir = linearSegDir(traject->getSegmentBoundary(effectiveSegmentIndex).first);
+            double misalignment = calcSmallestAngleAbsolute(currentSegDir, robotHeading);
+            LoggerStream::getInstance() << INFO << "Segment ->" << effectiveSegmentIndex
+                << ": segDir=" << currentSegDir << " robotHeading=" << robotHeading << " misalignment=" << misalignment;
+            manager->getStream().setRedisValue("pc.bt.seg_dir", to_string(currentSegDir));
+            manager->getStream().setRedisValue("pc.bt.seg_misalignment", to_string(misalignment));
+            manager->getStream().setRedisValue("pc.bt.seg_prev", to_string(prevSeg));
+            if (misalignment > headingThreshold && prevSeg >= 0) {
+                maneuverActive = true;
+                LoggerStream::getInstance() << INFO << "Maneuver lock set for segment " << effectiveSegmentIndex;
+            }
+            auto& segs = traject->getField().getTrajectSegments();
+            nlohmann::json segmentJson;
+            segmentJson["algorithm"] = segs.getFields(segmentIndex)[0]->s;
+            segmentJson["sensor"]    = segs.getFields(segmentIndex)[1]->s;
+            if (segs.getNumFields(segmentIndex) > 2) {
+                segmentJson["fallback"]["algorithm"] = segs.getFields(segmentIndex)[2]->s;
+                segmentJson["fallback"]["sensor"]    = segs.getFields(segmentIndex)[3]->s;
+            }
+            behaviourTree = btBuilder->build(segmentJson);
+            LoggerStream::getInstance() << INFO << "BT rebuilt for segment " << segmentIndex;
+        }
+
+        // Tick de BT
+        if (behaviourTree) {
+            Status btResult = behaviourTree->tick();
+            if (btResult == Status::FAILURE) {
+                setVelocityOperation();
+                return;
+            }
+            // Lees het actieve algoritme uit Redis na BT selectie
+            int modeInt = manager->getVariable("pc.navigation.mode")->getValue<int>();
+            algorithmMode = static_cast<AlgorithmMode>(modeInt);
+        }
+    } catch (const std::exception& e) {
+        LoggerStream::getInstance() << ERROR << "BT error: " << e.what();
+    } }
 
     // ** STATE DIAGRAM **
     switch (algorithmMode)

@@ -11,10 +11,12 @@
 #pragma once
 
 #include <string>
+#include <optional>
 #include <Utils/Settings/Task.h>
 #include <ThirdParty/json.hpp>
 #include <Utils/Geometry/Polygon.h>
 #include <Utils/Geometry/Point.h>
+#include <Utils/File/PointGeoJsonFile.h>
 
 namespace Ilvo {
 namespace Utils {
@@ -42,6 +44,8 @@ namespace Settings {
         Geometry::Polygon geofence;
         /** @brief A list of the points the traject (not interpolated)*/
         std::vector<Geometry::PointPtr> trajectPoints;
+        /** @brief Segment data from GeoJSON (swaths + headlands with algorithm/sensor info) */
+        std::optional<File::PointGeoJsonFile> trajectSegments;
     public:
         Field();
         Field(std::string name, int zoneId);
@@ -50,6 +54,8 @@ namespace Settings {
         // Field& operator=(const Field& other);
 
         const std::vector<Geometry::PointPtr>& getTrajectPoints() const;
+        bool hasTrajectSegments() const;
+        File::PointGeoJsonFile& getTrajectSegments();
         const Geometry::Polygon& getGeofence() const;
         std::vector<Task>& getTasks();
         /** @brief Check if the field has tasks of a certain type */

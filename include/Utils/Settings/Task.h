@@ -66,6 +66,7 @@ namespace Settings {
 
     public:
         Task(std::string baseFilePath, nlohmann::json task, int gpsZoneId);
+        Task(nlohmann::json feature, nlohmann::json taskInfo, int gpsZoneId);
         ~Task() = default;
 
         // 1. Explicitly delete the Copy Constructor

@@ -21,6 +21,8 @@
 #include <Utils/Settings/Platform.h>
 #include <Utils/Pid/PidController.h>
 #include <Utils/Timing/Logic.h>
+#include <Navigation/BehaviourTreeBuilder.h>
+#include <Navigation/FallbackNode.h>
 
 namespace Ilvo {
 namespace Core {
@@ -54,6 +56,19 @@ namespace Core {
 
         /** @brief Velocity operation data used during creep operation */
         Utils::Settings::VelocityVector creepVelocity;
+
+        /** @brief BT builder voor segment-gebaseerde navigatie */
+        std::unique_ptr<BehaviourTreeBuilder> btBuilder;
+        /** @brief Huidige BT boom voor het actieve segment */
+        std::shared_ptr<FallbackNode> behaviourTree;
+        /** @brief Index van het vorige segment, om segmentwisseling te detecteren */
+        int lastSegmentIndex;
+        /** @brief True wanneer een manoeuver actief is */
+        bool maneuverActive;
+        /** @brief Vorige GPS-positie voor het berekenen van de rijrichting */
+        Ilvo::Utils::Geometry::Point prevPosition;
+        /** @brief Berekende rijrichting op basis van GPS-verplaatsing (graden, UTM) */
+        double actualHeading;
         /** @brief Stops the robot's linear operation */
         void stopLinearOperation();
         /** @brief Stops the robot's angular operation */

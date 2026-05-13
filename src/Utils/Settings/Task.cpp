@@ -7,6 +7,7 @@
 #include <Utils/File/File.h>
 #include <Utils/File/PointCsvFile.h>
 #include <Utils/File/PointShapeFile.h>
+#include <Utils/Geometry/Transform.h>
 #include <Utils/Geometry/Polygon.h>
 #include <ThirdParty/bprinter/table_printer.h>
 
@@ -80,6 +81,52 @@ Task::Task(string baseFilePath, json j_task, int gpsZoneId) :
         }
     }
 
+}
+
+Task::Task(json feature, json taskInfo, int gpsZoneId) :
+    platform(Platform::getInstance()),
+    gpsZoneId(gpsZoneId),
+    hitch(platform.getHitch(taskInfo["hitch"]))
+{
+    if (taskInfo.contains("name")) name = taskInfo["name"].get<string>();
+    else throw SettingsParamNotFoundException("Task", "name");
+
+    if (taskInfo.contains("type")) type = taskInfo["type"].get<string>();
+    else throw SettingsParamNotFoundException("Task", "type");
+
+    if (taskInfo.contains("implement")) {
+        implement = Implement(taskInfo["implement"].get<string>(), platform.robot.width);
+    } else {
+        implement = Implement(platform.robot.width);
+    }
+
+    // Lees polygonpunten uit GeoJSON 
+    auto& coordRings = feature["geometry"]["coordinates"];
+
+    class GeoJsonPointData : public PointData {
+    public:
+        GeoJsonPointData() : PointData(true) {}
+        void loadFromGeoJson(const json& coordRings, int utmZone) {
+            series.clear();
+            metadata.clear();
+            for (auto& ring : coordRings) {
+                vector<PointPtr> pts;
+                for (auto& coord : ring) {
+                    double lng = coord[0].get<double>();
+                    double lat = coord[1].get<double>();
+                    double x, y;
+                    LatLonToUTMXY(lat, lng, utmZone, x, y);
+                    pts.push_back(make_shared<Point>(x, y));
+                }
+                series.push_back(pts);
+                metadata.push_back({});
+            }
+        }
+    };
+
+    GeoJsonPointData f;
+    f.loadFromGeoJson(coordRings, gpsZoneId);
+    initVariant(f);
 }
 
 void Task::initVariant(PointData& f)
