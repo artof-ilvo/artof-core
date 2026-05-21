@@ -18,7 +18,7 @@ namespace Core {
         virtual Status tick() = 0;
     };
 
-    // Composite nodes hebben children
+    // Composite nodes hold child nodes
     class CompositeNode : public Node {
     protected:
         std::vector<std::shared_ptr<Node>> children;
@@ -26,16 +26,16 @@ namespace Core {
         void addChild(std::shared_ptr<Node> child);
     };
 
-    // Leaf nodes hebben geen children
+    // Leaf nodes have no children
     class ConditionNode : public Node {
     public:
-        // Geeft enkel SUCCESS of FAILURE, nooit RUNNING
+        // Returns SUCCESS or FAILURE, never RUNNING
         virtual Status tick() = 0;
     };
 
     class ActionNode : public Node {
     public:
-        // Kan SUCCESS, FAILURE of RUNNING geven
+        // Can return SUCCESS, FAILURE or RUNNING
         virtual Status tick() = 0;
     };
 

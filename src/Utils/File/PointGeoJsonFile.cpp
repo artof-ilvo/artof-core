@@ -28,7 +28,7 @@ void PointGeoJsonFile::init(const std::string& filename)
     series.clear();
     metadata.clear();
 
-    // Lees features met type "swath" of "headland" uit data.geojson
+    // Only load swath and headland features
     for (auto& feature : j["features"]) {
         if (!feature["properties"]["type"].is_string()) continue;
         string type = feature["properties"]["type"].get<string>();
@@ -44,7 +44,7 @@ void PointGeoJsonFile::addSegment(const json& feature)
 
     vector<PointPtr> points;
     for (auto& coord : coords) {
-        // GeoJSON standaard: [lng, lat]
+        // GeoJSON coordinate order: [lng, lat]
         double lng = coord[0].get<double>();
         double lat = coord[1].get<double>();
         double x, y;

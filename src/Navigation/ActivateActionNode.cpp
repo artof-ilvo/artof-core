@@ -15,7 +15,7 @@ Status ActivateActionNode::tick()
 {
     int currentMode = manager->getVariable("pc.navigation.mode")->getValue<int>();
 
-    // Stop robot enkel bij algoritme wissel
+    // Only stop the robot when the algorithm actually changes
     if (currentMode != static_cast<int>(algorithmMode)) {
         manager->getVariable("plc.control.navigation.velocity.longitudinal")->setValue<double>(0.0);
         manager->getVariable("plc.control.navigation.velocity.angular")->setValue<double>(0.0);

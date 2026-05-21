@@ -20,7 +20,7 @@ namespace Core {
                            std::shared_ptr<SensorNode> sensor,
                            Utils::Settings::AlgorithmMode algorithmMode);
 
-        // Stopt robot, activeert sensor + algoritme, geeft SUCCESS
+        // Stops the robot, activates the sensor and algorithm, returns SUCCESS
         Status tick() override;
     };
 

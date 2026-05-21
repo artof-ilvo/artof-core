@@ -29,7 +29,7 @@ namespace Core {
     public:
         BehaviourTreeBuilder(Utils::Redis::VariableManager* manager, double accuracyThreshold = 0.5);
 
-        // Bouwt een volledige boom voor een segment uit de JSON
+        // Builds a complete behaviour tree for a segment from its JSON metadata
         std::shared_ptr<FallbackNode> build(const nlohmann::json& segment);
     };
 

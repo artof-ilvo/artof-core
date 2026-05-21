@@ -549,7 +549,7 @@ int Traject::getCurrentSegmentIndex(int interpolationIndex, int lookaheadPoints 
     if (segmentBoundaries.empty())
         return -1;
 
-    // Zoek het huidige segment zonder lookahead
+    // Find the current segment without lookahead
     int currentSeg = (int)segmentBoundaries.size() - 1;
     for (int i = 0; i < (int)segmentBoundaries.size(); i++) {
         if (interpolationIndex >= segmentBoundaries[i].first &&
@@ -559,7 +559,7 @@ int Traject::getCurrentSegmentIndex(int interpolationIndex, int lookaheadPoints 
         }
     }
 
-    // Kijk maximaal 1 segment vooruit — alleen als we dicht bij het einde zijn
+    // Look at most 1 segment ahead when close to the end of the current segment
     if (lookaheadPoints > 0 && currentSeg < (int)segmentBoundaries.size() - 1) {
         if (interpolationIndex + lookaheadPoints >= segmentBoundaries[currentSeg].second)
             return currentSeg + 1;

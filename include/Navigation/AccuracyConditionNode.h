@@ -15,7 +15,7 @@ namespace Core {
     public:
         AccuracyConditionNode(std::shared_ptr<SensorNode> sensor, double threshold);
 
-        // SUCCESS als accuracy >= threshold, anders FAILURE
+        // Returns SUCCESS if accuracy >= threshold, FAILURE otherwise
         Status tick() override;
     };
 

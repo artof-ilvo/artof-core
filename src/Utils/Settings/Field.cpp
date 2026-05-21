@@ -92,7 +92,7 @@ Field::Field(std::string name, int zoneId) :
     bool polygon = false;
 
     if (hasDataGeoJson) {
-        // Lees alles uit data.geojson
+        // Load all features from data.geojson
         ifstream geoFile(dataGeoJsonPath);
         json geoJson = json::parse(geoFile);
 
@@ -106,7 +106,6 @@ Field::Field(std::string name, int zoneId) :
             string featName = feature["properties"]["name"].is_string() ? feature["properties"]["name"].get<string>() : "";
 
             if (featName == "traject" && feature["geometry"]["type"] == "LineString") {
-                // Traject punten
                 for (auto& coord : feature["geometry"]["coordinates"]) {
                     double lng = coord[0].get<double>();
                     double lat = coord[1].get<double>();
@@ -117,7 +116,6 @@ Field::Field(std::string name, int zoneId) :
                 hasTraject = true;
 
             } else if (featName == "geofence" || featType == "polygon") {
-                // Geofence
                 vector<PointPtr> pts;
                 for (auto& coord : feature["geometry"]["coordinates"][0]) {
                     double lng = coord[0].get<double>();
@@ -132,7 +130,6 @@ Field::Field(std::string name, int zoneId) :
                 }
 
             } else if (featType == "task") {
-                // Task vanuit GeoJSON feature
                 string taskName = featName;
                 json taskInfo;
                 if (fieldInfo.contains("tasks") && fieldInfo["tasks"].is_array()) {
@@ -148,11 +145,10 @@ Field::Field(std::string name, int zoneId) :
             }
         }
 
-        // BT segmenten (swaths/headlands) uit dezelfde file
         if (btSegments.getNumSeries() > 0)
             this->trajectSegments = btSegments;
 
-        // Fallback naar shapefiles als geojson onvolledig is
+        // use shp if geojson data is missing
         if (!hasTraject) {
             string _trajectFilePath = searchFileWithExtension(trajectFilePath, ".shp");
             if (_trajectFilePath.size() > 0) {
@@ -177,7 +173,7 @@ Field::Field(std::string name, int zoneId) :
         }
 
     } else {
-        // shapefiles
+        // geojson missing, use shp
         if (fieldInfo.contains("tasks") && fieldInfo["tasks"].is_array()) {
             for (json task : fieldInfo["tasks"]) {
                 string taskDirectoryPath = baseFilePath + "/field/" + name + "/tasks";

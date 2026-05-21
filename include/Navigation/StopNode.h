@@ -13,7 +13,7 @@ namespace Core {
     public:
         StopNode(Utils::Redis::VariableManager* manager);
 
-        // Stopt robot permanent, geeft altijd SUCCESS
+        // Stops the robot, always returns SUCCESS
         Status tick() override;
     };
 

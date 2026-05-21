@@ -102,7 +102,7 @@ void NavigationControl::update(AlgorithmMode algorithmMode, bool firstTime) {
         algorithm.longitudinalTaskVelocity = algorithm.velocity.longitudinal;
     }
 
-    // ** BT: segmentgebaseerde navigatie (enkel bij GeoJSON traject) **
+    // BT: segment-based navigation (GeoJSON trajectories only)
     if (traject->hasSegments()) { try {
         // segmentBoundaries are built with LINEAR indices — always use linear for direction lookups
         const auto& linInterp = traject->getInterpolation(InterpolationType::LINEAR);
@@ -122,11 +122,11 @@ void NavigationControl::update(AlgorithmMode algorithmMode, bool firstTime) {
         double headingThreshold = manager->existsVariable("pc.bt.heading_threshold") ?
             manager->getVariable("pc.bt.heading_threshold")->getValue<double>() : 45.0;
 
-        // Bereken de werkelijke rijrichting uit GPS-verplaatsing (onafhankelijk van trajectreferentie)
+        // Compute actual heading from GPS displacement, independent of the trajectory reference frame
         double dx = position->currentPoint.x() - prevPosition.x();
         double dy = position->currentPoint.y() - prevPosition.y();
         double movedDist = std::sqrt(dx*dx + dy*dy);
-        if (movedDist > 0.05) {  // alleen updaten bij voldoende verplaatsing (ruis filteren)
+        if (movedDist > 0.05) {  // only update when displacement is large enough to filter noise
             actualHeading = RadToDeg(std::atan2(dy, dx));
             prevPosition = position->currentPoint;
         }
@@ -155,7 +155,7 @@ void NavigationControl::update(AlgorithmMode algorithmMode, bool firstTime) {
             }
         }
 
-        // Debug values naar redis
+        // Debug values to Redis
         manager->getStream().setRedisValue("pc.bt.segment_index", to_string(effectiveSegmentIndex));
         manager->getStream().setRedisValue("pc.bt.raw_segment_index", to_string(segmentIndex));
         manager->getStream().setRedisValue("pc.bt.closest_point_index", to_string(linearClosestIdx));
@@ -163,16 +163,13 @@ void NavigationControl::update(AlgorithmMode algorithmMode, bool firstTime) {
         manager->getStream().setRedisValue("pc.bt.maneuver_active", maneuverActive ? "1" : "0");
         manager->getStream().setRedisValue("pc.bt.robot_heading", to_string(robotHeading));
 
-        // Bouw BT opnieuw als segment is gewisseld
+        // Rebuild BT when the active segment changes
         if (effectiveSegmentIndex != lastSegmentIndex && effectiveSegmentIndex >= 0) {
             int prevSeg = lastSegmentIndex;
             lastSegmentIndex = effectiveSegmentIndex;
             segmentIndex = effectiveSegmentIndex;
 
-            // Detecteer manoeuver: groot richtingsverschil tussen vorig en volgend segment
-            // Lock wanneer robot bij het betreden van dit segment NIET aligned is met de segmentrichting.
-            // Swath: robot rijdt al in de swath-richting bij binnenkomst → geen lock.
-            // Headland: robot rijdt nog in swath-richting bij binnenkomst → lock tot aligned met volgende swath.
+            // Lock when entering a segment misaligned — released once heading matches the next segment
             double currentSegDir = linearSegDir(traject->getSegmentBoundary(effectiveSegmentIndex).first);
             double misalignment = calcSmallestAngleAbsolute(currentSegDir, robotHeading);
             LoggerStream::getInstance() << INFO << "Segment ->" << effectiveSegmentIndex
@@ -196,14 +193,14 @@ void NavigationControl::update(AlgorithmMode algorithmMode, bool firstTime) {
             LoggerStream::getInstance() << INFO << "BT rebuilt for segment " << segmentIndex;
         }
 
-        // Tick de BT
+        // Tick the BT
         if (behaviourTree) {
             Status btResult = behaviourTree->tick();
             if (btResult == Status::FAILURE) {
                 setVelocityOperation();
                 return;
             }
-            // Lees het actieve algoritme uit Redis na BT selectie
+            // Read the active algorithm from Redis after BT selection
             int modeInt = manager->getVariable("pc.navigation.mode")->getValue<int>();
             algorithmMode = static_cast<AlgorithmMode>(modeInt);
         }

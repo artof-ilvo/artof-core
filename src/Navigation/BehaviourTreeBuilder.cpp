@@ -15,7 +15,6 @@ std::shared_ptr<SensorNode> BehaviourTreeBuilder::buildSensor(const std::string&
 {
     if (sensorId == "rtk")
         return std::make_shared<RTKSensorNode>(manager);
-    // Toekomstige sensoren hier toevoegen:
     // if (sensorId == "camera") return std::make_shared<CameraSensorNode>(manager);
     throw std::runtime_error("Unknown sensor: " + sensorId);
 }
@@ -44,19 +43,17 @@ std::shared_ptr<FallbackNode> BehaviourTreeBuilder::build(const json& segment)
 {
     auto tree = std::make_shared<FallbackNode>();
 
-    // 1. Voorkeur uit segment
     std::string prefAlgo   = segment["algorithm"].get<std::string>();
     std::string prefSensor = segment["sensor"].get<std::string>();
     tree->addChild(buildSequence(prefAlgo, prefSensor));
 
-    // 2. Fallback uit segment
     if (segment.contains("fallback")) {
         std::string fbAlgo   = segment["fallback"]["algorithm"].get<std::string>();
         std::string fbSensor = segment["fallback"]["sensor"].get<std::string>();
         tree->addChild(buildSequence(fbAlgo, fbSensor));
     }
 
-    // 3. Altijd een StopNode als laatste fallback
+    // StopNode as final fallback when all options fail
     tree->addChild(std::make_shared<StopNode>(manager));
 
     return tree;

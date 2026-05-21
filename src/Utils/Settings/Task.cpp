@@ -100,7 +100,7 @@ Task::Task(json feature, json taskInfo, int gpsZoneId) :
         implement = Implement(platform.robot.width);
     }
 
-    // Lees polygonpunten uit GeoJSON 
+    // Read polygon points from GeoJSON
     auto& coordRings = feature["geometry"]["coordinates"];
 
     class GeoJsonPointData : public PointData {
