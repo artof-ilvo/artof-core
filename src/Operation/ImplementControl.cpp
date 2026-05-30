@@ -35,12 +35,26 @@ void ImplementControl::init(Utils::Redis::VariableManager* manager, shared_ptr<T
     this->position = position;
 }
 
-void ImplementControl::update(bool autoMode) 
-{   
+void ImplementControl::update(bool autoMode)
+{
     disableImplement = manager->getVariable("pc.implement.disable")->getValue<bool>();
 
+    // Reset all continuous section rates before processing zones so sections
+    // outside every zone return to 0 rather than keeping a stale rate.
+    for (Task& task: traject->getField().getTasks()) {
+        bool continuousTask = std::find(continuousOperationTypes.begin(), continuousOperationTypes.end(), task.getType()) != continuousOperationTypes.end();
+        if (continuousTask && task.getImplement().worksOnTaskmap()) {
+            string entityName = task.getHitch().getEntityName();
+            for (int i = 0; i < (int)task.getImplement().getSections().size(); i++) {
+                string name = "plc.control." + entityName + ".activate_sections." + to_string(i);
+                manager->getVariable(name)->setValue<int>(0);
+                task.getImplement().getSections().at(i)->setRate(0);
+            }
+        }
+    }
+
     // process
-    for (Task& task: traject->getField().getTasks()) {  
+    for (Task& task: traject->getField().getTasks()) {
         // update 
         task.updateState(manager); 
         bool continuousTask = std::find(continuousOperationTypes.begin(), continuousOperationTypes.end(), task.getType()) != continuousOperationTypes.end();

@@ -13,9 +13,8 @@ BehaviourTreeBuilder::BehaviourTreeBuilder(VariableManager* manager, double accu
 
 std::shared_ptr<SensorNode> BehaviourTreeBuilder::buildSensor(const std::string& sensorId)
 {
-    if (sensorId == "rtk")
-        return std::make_shared<RTKSensorNode>(manager);
-    // if (sensorId == "camera") return std::make_shared<CameraSensorNode>(manager);
+    if (sensorId == "rtk")    return std::make_shared<RTKSensorNode>(manager);
+    if (sensorId == "camera") return std::make_shared<CameraSensorNode>(manager);
     throw std::runtime_error("Unknown sensor: " + sensorId);
 }
 
@@ -28,13 +27,21 @@ AlgorithmMode BehaviourTreeBuilder::buildAlgorithmMode(const std::string& algori
     throw std::runtime_error("Unknown algorithm: " + algorithmId);
 }
 
+SensorMode BehaviourTreeBuilder::buildSensorMode(const std::string& sensorId)
+{
+    if (sensorId == "rtk")    return SensorMode::RTK;
+    if (sensorId == "camera") return SensorMode::CAMERA;
+    throw std::runtime_error("Unknown sensor: " + sensorId);
+}
+
 std::shared_ptr<Node> BehaviourTreeBuilder::buildSequence(const std::string& algorithmId, const std::string& sensorId)
 {
-    auto sensor = buildSensor(sensorId);
+    auto sensor      = buildSensor(sensorId);
+    auto sensorMode  = buildSensorMode(sensorId);
     auto algorithmMode = buildAlgorithmMode(algorithmId);
 
     auto sequence = std::make_shared<SequenceNode>();
-    sequence->addChild(std::make_shared<ActivateActionNode>(manager, sensor, algorithmMode));
+    sequence->addChild(std::make_shared<ActivateActionNode>(manager, sensor, sensorMode, algorithmMode));
     sequence->addChild(std::make_shared<AccuracyConditionNode>(sensor, accuracyThreshold));
     return sequence;
 }

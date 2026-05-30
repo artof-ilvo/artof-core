@@ -6,8 +6,9 @@ using namespace Ilvo::Utils::Settings;
 
 ActivateActionNode::ActivateActionNode(VariableManager* manager,
                                        std::shared_ptr<SensorNode> sensor,
+                                       SensorMode sensorMode,
                                        AlgorithmMode algorithmMode)
-    : manager(manager), sensor(sensor), algorithmMode(algorithmMode)
+    : manager(manager), sensor(sensor), sensorMode(sensorMode), algorithmMode(algorithmMode)
 {
 }
 
@@ -22,6 +23,11 @@ Status ActivateActionNode::tick()
     }
 
     manager->getVariable("pc.navigation.mode")->setValue<int>(static_cast<int>(algorithmMode));
+    manager->getStream().setRedisValue("pc.navigation.sensor", std::to_string(static_cast<int>(sensorMode)));
+
+    Eigen::Vector3d offset = sensor->getOffset();
+    manager->getStream().setRedisValue("pc.sensor.distance_error",    std::to_string(offset[0]));
+    manager->getStream().setRedisValue("pc.sensor.orientation_error", std::to_string(offset[1]));
 
     return Status::SUCCESS;
 }

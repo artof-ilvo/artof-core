@@ -106,7 +106,7 @@ Task::Task(json feature, json taskInfo, int gpsZoneId) :
     class GeoJsonPointData : public PointData {
     public:
         GeoJsonPointData() : PointData(true) {}
-        void loadFromGeoJson(const json& coordRings, int utmZone) {
+        void loadFromGeoJson(const json& coordRings, int utmZone, double rate) {
             series.clear();
             metadata.clear();
             for (auto& ring : coordRings) {
@@ -119,13 +119,18 @@ Task::Task(json feature, json taskInfo, int gpsZoneId) :
                     pts.push_back(make_shared<Point>(x, y));
                 }
                 series.push_back(pts);
-                metadata.push_back({});
+                metadata.push_back({make_shared<ShapeFieldData>("rate", rate)});
             }
         }
     };
 
+    double rate = 1.0;
+    auto& props = feature["properties"];
+    if (props.contains("rate") && !props["rate"].is_null())
+        rate = props["rate"].get<double>();
+
     GeoJsonPointData f;
-    f.loadFromGeoJson(coordRings, gpsZoneId);
+    f.loadFromGeoJson(coordRings, gpsZoneId, rate);
     initVariant(f);
 }
 
@@ -288,8 +293,7 @@ const vector<IndexPointPtr>& Task::getPathPointsDiscr()
 bool Task::updateSections(VariableManager* manager, bool disable)
 {
     bool activeSections = false;
-    // If present read in the new as applied map.
-    asAppliedMap->update();
+    if (asAppliedMap) asAppliedMap->update();
 
     for (int i = 0; i < implement.getSections().size(); i++) {
         auto section = implement.getSections().at(i);
@@ -298,8 +302,13 @@ bool Task::updateSections(VariableManager* manager, bool disable)
         // Get sections rate
         string name = "plc.control." + hitch.getEntityName() + ".activate_sections." + to_string(i);
         if (getImplement().worksOnTaskmap()) {
-            section->setRate(insideTaskMap(section, disable));
-            manager->getVariable(name)->setValue<int>(section->getRate());
+            uint8_t newRate = insideTaskMap(section, disable);
+            // For variable-rate zones: only write if this task is active in this zone.
+            // Skip writing 0 so a higher rate from another zone isn't overwritten.
+            if (newRate > 0) {
+                section->setRate(newRate);
+                manager->getVariable(name)->setValue<int>(section->getRate());
+            }
         } else {
             bool active = manager->getVariable(name)->getValue<bool>(); // && !asAppliedMap->applied(section->getPolygon());
             section->setRate(active);

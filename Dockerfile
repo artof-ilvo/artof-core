@@ -1,10 +1,11 @@
 FROM gcc:latest
 
 # Install necessary dependencies
-RUN apt-get update && apt-get install -y cmake \
-                                         curl\
+RUN apt-get update && apt-get install -y --no-install-recommends cmake \
+                                         curl \
                                          iputils-ping \
-                                         libboost-filesystem-dev libboost-system-dev libboost-thread-dev
+                                         libboost-filesystem-dev libboost-system-dev libboost-thread-dev \
+                                         libgdal-dev
 
 
 # Set the working directory in the container

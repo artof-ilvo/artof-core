@@ -151,7 +151,11 @@ void Navigation::serverTick()
         LoggerStream::getInstance() << INFO << "Navigation mode changed to " << algorithmMode;
         traject->setInterpolation(algorithmModeToInterpolationType[algorithmMode]);
         resetPosition();
-        navigationControl.reset();
+        // When using a segmented (GeoJSON) trajectory the BT drives mode transitions itself.
+        // Calling reset() would clear the maneuver lock and BT state, so skip it in that case.
+        if (!traject->hasSegments()) {
+            navigationControl.reset();
+        }
         if (algorithmMode == AlgorithmMode::EXTERNAL) {
             navigationControl.setVelocityOperation();  // Reset velocity if pressing external!
         }

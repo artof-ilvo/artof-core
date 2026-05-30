@@ -35,7 +35,7 @@ namespace Settings {
         /** @brief The GPS zone id of the field (UTM...N) */
         int gpsZoneId;
 
-        /** @brief The field information that is also stored in the file hierarchy as a json */
+        /** @brief The field information stored in info.json */
         nlohmann::json fieldInfo;
         /** @brief A list of tasks in the field */
         std::vector<Task> tasks;
@@ -51,7 +51,7 @@ namespace Settings {
         Field(std::string name, int zoneId);
         ~Field() = default;
 
-        // Field& operator=(const Field& other);
+        // Field& operator=(const Field& other); // Task has Hitch& member — not copyable
 
         const std::vector<Geometry::PointPtr>& getTrajectPoints() const;
         bool hasTrajectSegments() const;

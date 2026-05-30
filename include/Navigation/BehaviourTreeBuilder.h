@@ -8,6 +8,7 @@
 #include <Navigation/StopNode.h>
 #include <Navigation/SensorNode.h>
 #include <Navigation/RTKSensorNode.h>
+#include <Navigation/CameraSensorNode.h>
 #include <Utils/Redis/VariableManager.h>
 #include <Utils/Settings/Platform.h>
 #include <ThirdParty/json.hpp>
@@ -23,6 +24,7 @@ namespace Core {
         double accuracyThreshold;
 
         std::shared_ptr<SensorNode> buildSensor(const std::string& sensorId);
+        Utils::Settings::SensorMode buildSensorMode(const std::string& sensorId);
         Utils::Settings::AlgorithmMode buildAlgorithmMode(const std::string& algorithmId);
         std::shared_ptr<Node> buildSequence(const std::string& algorithmId, const std::string& sensorId);
 

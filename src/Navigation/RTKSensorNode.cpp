@@ -10,7 +10,7 @@ RTKSensorNode::RTKSensorNode(VariableManager* manager)
 {
 }
 
-Eigen::Vector3d RTKSensorNode::getOffset(Traject& traject)
+Eigen::Vector3d RTKSensorNode::getOffset()
 {
     double lateralError      = manager->getVariable("pc.path.distance_error")->getValue<double>();
     double orientationError  = manager->getVariable("pc.path.orientation_error")->getValue<double>();

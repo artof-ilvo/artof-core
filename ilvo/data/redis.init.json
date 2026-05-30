@@ -116,6 +116,7 @@
         "pc.navigation.spinning_velocity": 0.2,
         "pc.navigation.max_angular_velocity": 10.0,
         "pc.navigation.mode": 1,
+        "pc.navigation.sensor": 0,
         "pc.navigation.spin_angle": 25.0,
         "pc.navigation.turning_radius": 3.0,
         "pc.purepursuit.carrot_distance": 3.5,

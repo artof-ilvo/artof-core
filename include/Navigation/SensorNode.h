@@ -10,7 +10,7 @@ namespace Core {
     public:
         virtual ~SensorNode() = default;
 
-        virtual Eigen::Vector3d getOffset(Utils::Settings::Traject& traject) = 0;
+        virtual Eigen::Vector3d getOffset() = 0;
         virtual double accuracy();
     };
 }

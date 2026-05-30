@@ -23,7 +23,7 @@ using namespace Ilvo::Exception;
 
 using namespace std;
 using namespace boost::filesystem;
-using namespace nlohmann; 
+using namespace nlohmann;
 using json = nlohmann::json;
 
 Field::Field()
@@ -32,15 +32,13 @@ Field::Field()
 string Field::checkFieldName(string name) {
     string dirPath = string(getenv("ILVO_PATH")) + "/field";
     string fieldPath = dirPath + "/" + name;
-
     if ( !exists(fieldPath)) {
         throw PathNotFoundException(fieldPath);
     }
-
     return name;
 }
 
-Field::Field(std::string name, int zoneId) : 
+Field::Field(std::string name, int zoneId) :
     baseFilePath(string(getenv("ILVO_PATH"))),
     name(name),
     trajectFilePath(string(getenv("ILVO_PATH")) + "/field/" + name + "/traject"),
@@ -53,23 +51,13 @@ Field::Field(std::string name, int zoneId) :
         throw PathNotFoundException(fieldPath);
     }
 
-    string dataGeoJsonPath = baseFilePath + "/field/" + name + "/data.geojson";
-
     LoggerStream::getInstance() << DEBUG << "Loading field: " << name;
     LoggerStream::getInstance() << DEBUG << "baseFilePath: " << baseFilePath;
     LoggerStream::getInstance() << DEBUG << "trajectFilePath: " << trajectFilePath;
     LoggerStream::getInstance() << DEBUG << "geofenceFilePath: " << geofenceFilePath;
     LoggerStream::getInstance() << DEBUG << "infoFilePath: " << infoFilePath;
 
-    bool hasDataGeoJson = exists(dataGeoJsonPath);
-
-    if (!hasDataGeoJson) {
-        if ( !exists(trajectFilePath) )
-            throw PathNotFoundException(trajectFilePath);
-        if ( !exists(geofenceFilePath) )
-            throw PathNotFoundException(geofenceFilePath);
-    }
-
+    // Load info.json if present (optional for GeoJSON fields)
     if ( exists(infoFilePath) ) {
         std::fstream f(infoFilePath);
         try {
@@ -78,32 +66,36 @@ Field::Field(std::string name, int zoneId) :
             LoggerStream::getInstance() << ERROR << "Field info file parse error, file name: \"" << name << "\", file path: \"" << infoFilePath << "\", " << e.what();
             throw runtime_error("Field info file parse error, " + std::string(e.what()));
         }
+        if (fieldInfo.contains("name") && fieldInfo["name"].is_string()) {
+            this->name = fieldInfo["name"].get<string>();
+            removeCharacters(this->name, CHARS_BRACKETS);
+        }
     }
 
-    // parse the json data
-    if (fieldInfo.contains("name") && fieldInfo["name"].is_string()) {
-        this->name = fieldInfo["name"].get<string>();
-        removeCharacters(this->name, CHARS_BRACKETS);
-    }
+    string dataGeoJsonPath = baseFilePath + "/field/" + name + "/data.geojson";
+    bool hasDataGeoJson = exists(dataGeoJsonPath);
 
-    // read in files
     vector<string> xFields{"Easting", "X"};
     vector<string> yFields{"Northing", "Y"};
-    bool polygon = false;
 
     if (hasDataGeoJson) {
-        // Load all features from data.geojson
+        // --- GeoJSON path ---
         ifstream geoFile(dataGeoJsonPath);
         json geoJson = json::parse(geoFile);
 
-        bool hasTraject = false;
+        bool hasTraject  = false;
         bool hasGeofence = false;
+
+        // Parse BT segments (swath/headland with algorithm/sensor metadata)
         PointGeoJsonFile btSegments(gpsZoneId);
         btSegments.init(dataGeoJsonPath);
+        if (btSegments.getNumSeries() > 0)
+            this->trajectSegments = btSegments;
 
         for (auto& feature : geoJson["features"]) {
-            string featType = feature["properties"]["type"].is_string() ? feature["properties"]["type"].get<string>() : "";
-            string featName = feature["properties"]["name"].is_string() ? feature["properties"]["name"].get<string>() : "";
+            auto& props = feature["properties"];
+            string featType = props["type"].is_string() ? props["type"].get<string>() : "";
+            string featName = props["name"].is_string() ? props["name"].get<string>() : "";
 
             if (featName == "traject" && feature["geometry"]["type"] == "LineString") {
                 for (auto& coord : feature["geometry"]["coordinates"]) {
@@ -130,25 +122,21 @@ Field::Field(std::string name, int zoneId) :
                 }
 
             } else if (featType == "task") {
-                string taskName = featName;
-                json taskInfo;
-                if (fieldInfo.contains("tasks") && fieldInfo["tasks"].is_array()) {
-                    for (auto& t : fieldInfo["tasks"]) {
-                        if (t.contains("name") && t["name"].is_string() && t["name"].get<string>() == taskName) {
-                            taskInfo = t;
-                            break;
-                        }
-                    }
-                }
-                if (!taskInfo.is_null())
+                // Build taskInfo from GeoJSON properties
+                if (props.contains("hitch_type") && props.contains("hitch_name")
+                    && !props["hitch_type"].is_null() && !props["hitch_name"].is_null()) {
+                    json taskInfo;
+                    taskInfo["name"]  = featName;
+                    taskInfo["type"]  = props["hitch_type"];
+                    taskInfo["hitch"] = props["hitch_name"];
+                    if (props.contains("implement") && !props["implement"].is_null())
+                        taskInfo["implement"] = props["implement"];
                     tasks.push_back(Task(feature, taskInfo, gpsZoneId));
+                }
             }
         }
 
-        if (btSegments.getNumSeries() > 0)
-            this->trajectSegments = btSegments;
-
-        // use shp if geojson data is missing
+        // Fallback to shp if traject/geofence not in GeoJSON
         if (!hasTraject) {
             string _trajectFilePath = searchFileWithExtension(trajectFilePath, ".shp");
             if (_trajectFilePath.size() > 0) {
@@ -165,15 +153,16 @@ Field::Field(std::string name, int zoneId) :
                 geofence = Polygon(f.getPoints(0));
             }
         }
-        if (tasks.empty() && fieldInfo.contains("tasks") && fieldInfo["tasks"].is_array()) {
-            for (json task : fieldInfo["tasks"]) {
-                string taskDirectoryPath = baseFilePath + "/field/" + name + "/tasks";
-                tasks.push_back(Task(taskDirectoryPath, task, gpsZoneId));
-            }
-        }
+
 
     } else {
-        // geojson missing, use shp
+        // --- Original shp/info.json path ---
+        if ( !exists(trajectFilePath) )
+            throw PathNotFoundException(trajectFilePath);
+        if ( !exists(geofenceFilePath) )
+            throw PathNotFoundException(geofenceFilePath);
+
+        // Tasks from info.json
         if (fieldInfo.contains("tasks") && fieldInfo["tasks"].is_array()) {
             for (json task : fieldInfo["tasks"]) {
                 string taskDirectoryPath = baseFilePath + "/field/" + name + "/tasks";
@@ -181,15 +170,17 @@ Field::Field(std::string name, int zoneId) :
             }
         }
 
+        // Traject
+        bool polygon = false;
         string _trajectFilePath = searchFileWithExtension(trajectFilePath, ".csv");
         if (_trajectFilePath.size() > 0) {
-            PointCsvFile f(false);
+            PointCsvFile f(polygon);
             f.init(_trajectFilePath, xFields, yFields);
             this->trajectPoints = f.getPoints(0);
         } else {
             _trajectFilePath = searchFileWithExtension(trajectFilePath, ".shp");
             if (_trajectFilePath.size() > 0) {
-                PointShapeFile f(false, gpsZoneId);
+                PointShapeFile f(polygon, gpsZoneId);
                 f.init(_trajectFilePath);
                 this->trajectPoints = f.getPoints(0);
             } else {
@@ -197,16 +188,17 @@ Field::Field(std::string name, int zoneId) :
             }
         }
 
+        // Geofence
         polygon = true;
         string _geofenceFilePath = searchFileWithExtension(geofenceFilePath, ".csv");
         if (_geofenceFilePath.size() > 0) {
-            PointCsvFile f(true);
+            PointCsvFile f(polygon);
             f.init(_geofenceFilePath, xFields, yFields);
             geofence = Polygon(f.getPoints(0));
         } else {
             _geofenceFilePath = searchFileWithExtension(geofenceFilePath, ".shp");
             if (_geofenceFilePath.size() > 0) {
-                PointShapeFile f(true, gpsZoneId);
+                PointShapeFile f(polygon, gpsZoneId);
                 f.init(_geofenceFilePath);
                 geofence = Polygon(f.getPoints(0));
             } else {
@@ -216,27 +208,6 @@ Field::Field(std::string name, int zoneId) :
     }
 }
 
-// Field& Field::operator=(const Field& other)
-// {
-//     trajectFilePath = other.trajectFilePath;
-//     geofenceFilePath = other.geofenceFilePath;
-//     infoFilePath = other.infoFilePath;
-
-//     baseFilePath = other.baseFilePath;
-//     name = other.name;
-//     gpsZoneId = other.gpsZoneId;
-
-//     fieldInfo = other.fieldInfo;
-//     geofence = other.geofence;
-
-//     tasks.clear();
-//     copy(other.tasks.begin(), other.tasks.end(), back_inserter(tasks));
-
-//     trajectPoints.clear();
-//     trajectPoints.insert(trajectPoints.begin(), other.trajectPoints.begin(), other.trajectPoints.end());
-
-//     return *this;
-// }
 
 const std::vector<PointPtr>& Field::getTrajectPoints() const
 {
@@ -252,7 +223,6 @@ PointGeoJsonFile& Field::getTrajectSegments()
 {
     return trajectSegments.value();
 }
-
 
 const Polygon& Field::getGeofence() const
 {
@@ -330,9 +300,7 @@ void Field::writeJson(const std::string& relativePath) const
     string file_path = baseFilePath + "/" + relativePath;
     jsonfile.open(file_path);
     if (!jsonfile.is_open())
-    {
         throw PathNotFoundException(file_path);
-    }
     jsonfile << this->toJson();
     jsonfile.close();
 }
@@ -343,9 +311,7 @@ void Field::writeJson() const
     string file_path = baseFilePath + "/field/" + name + "/field.json";
     jsonfile.open(file_path);
     if (!jsonfile.is_open())
-    {
         throw PathNotFoundException(file_path);
-    }
     jsonfile << this->toJson();
     jsonfile.close();
 }

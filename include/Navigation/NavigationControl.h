@@ -57,17 +57,15 @@ namespace Core {
         /** @brief Velocity operation data used during creep operation */
         Utils::Settings::VelocityVector creepVelocity;
 
-        /** @brief BT builder voor segment-gebaseerde navigatie */
         std::unique_ptr<BehaviourTreeBuilder> btBuilder;
-        /** @brief Huidige BT boom voor het actieve segment */
         std::shared_ptr<FallbackNode> behaviourTree;
-        /** @brief Index van het vorige segment, om segmentwisseling te detecteren */
+        /** @brief Index of the previous segment, used to detect segment changes */
         int lastSegmentIndex;
-        /** @brief True wanneer een manoeuver actief is */
+        /** @brief True when a maneuver is active */
         bool maneuverActive;
-        /** @brief Vorige GPS-positie voor het berekenen van de rijrichting */
+        /** @brief Previous GPS position used to compute heading from displacement */
         Ilvo::Utils::Geometry::Point prevPosition;
-        /** @brief Berekende rijrichting op basis van GPS-verplaatsing (graden, UTM) */
+        /** @brief Heading computed from GPS displacement (degrees, UTM) */
         double actualHeading;
         /** @brief Stops the robot's linear operation */
         void stopLinearOperation();

@@ -41,6 +41,7 @@ namespace Settings {
     }
 
     enum AlgorithmMode { PP_SPINNING_90 = 1, PP_SPINNING_180 = 2, PURE_PP = 3, PP_ROLL_BACK = 4, EXTERNAL=5 };
+    enum SensorMode    { RTK = 1, CAMERA = 2 };
 
     class NavigationMode 
     {

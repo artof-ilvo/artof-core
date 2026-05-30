@@ -104,6 +104,7 @@
         "spinning_velocity": "float",
         "max_angular_velocity": "float",
         "mode": "int",
+        "sensor": "int",
         "spin_angle": "float",
         "stop_turn_angle": "float",
         "turning_radius": "float",

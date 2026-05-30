@@ -34,11 +34,14 @@ void NavigationControl::init(Utils::Redis::VariableManager* manager, shared_ptr<
 void NavigationControl::reset() {
     LoggerStream::getInstance() << INFO << "Reset algorithm data";
     algorithm.angleToGoal = 0;  // reset smallestAngleDegrees
-    algorithm.fsmState = STRAIGHTLINE;  // set defaullt state is pure pursuit 
-    algorithm.steadyState = false;  // first enable the rough lateral controller  
+    algorithm.fsmState = STRAIGHTLINE;  // set defaullt state is pure pursuit
+    algorithm.steadyState = false;  // first enable the rough lateral controller
     steadyStateLateralController.reset();  // reset the lateral controllers
     roughLateralController.reset();  // reset the lateral controllers
     purepursuitController.reset();  // reset the purepursuit controllers
+    lastSegmentIndex = -1;
+    maneuverActive   = false;
+    behaviourTree    = nullptr;
 }
 
 bool NavigationControl::getRateSideways() const {
@@ -111,46 +114,49 @@ void NavigationControl::update(AlgorithmMode algorithmMode, bool firstTime) {
             return RadToDeg(std::atan2(linInterp[idx+1]->y() - linInterp[idx]->y(),
                                        linInterp[idx+1]->x() - linInterp[idx]->x()));
         };
-        double lookaheadDist = manager->existsVariable("pc.bt.lookahead_distance") ?
-            manager->getVariable("pc.bt.lookahead_distance")->getValue<double>() : 2.0;
         double interpDist = manager->getVariable("pc.purepursuit.inter_point_distance")->getValue<double>();
-        int lookaheadPoints = (int)(lookaheadDist / interpDist);
+        int lookaheadPoints = (int)(2.0 / interpDist);
         // Use linear closest point index for segment detection — segmentBoundaries are in linear space
         int linearClosestIdx = traject->closestPointIndexLinear(position->currentPoint);
         int segmentIndex = traject->getCurrentSegmentIndex(linearClosestIdx, lookaheadPoints);
 
-        double headingThreshold = manager->existsVariable("pc.bt.heading_threshold") ?
-            manager->getVariable("pc.bt.heading_threshold")->getValue<double>() : 45.0;
+        const double headingThreshold = 45.0;
 
         // Compute actual heading from GPS displacement, independent of the trajectory reference frame
         double dx = position->currentPoint.x() - prevPosition.x();
         double dy = position->currentPoint.y() - prevPosition.y();
         double movedDist = std::sqrt(dx*dx + dy*dy);
-        if (movedDist > 0.05) {  // only update when displacement is large enough to filter noise
+        if (movedDist > 0.05) {
             actualHeading = RadToDeg(std::atan2(dy, dx));
-            prevPosition = position->currentPoint;
+            prevPosition  = position->currentPoint;
         }
         double robotHeading = actualHeading;
         manager->getStream().setRedisValue("pc.bt.robot_heading", to_string(robotHeading));
 
-        // Determine effective segment
+        // Segment advancement uses lookahead for smooth transitions.
+        // Unlock check uses no lookahead: the robot must have physically crossed
+        // the boundary before the maneuver lock can release.
+        int segmentIndexExact = traject->getCurrentSegmentIndex(linearClosestIdx, 0);
+
         int effectiveSegmentIndex = (lastSegmentIndex >= 0) ? lastSegmentIndex : segmentIndex;
         if (lastSegmentIndex >= 0 && segmentIndex > lastSegmentIndex) {
             int nextSeg = lastSegmentIndex + 1;
+            int entryIdx = traject->getSegmentBoundary(nextSeg).first;
+            double nextDir = linearSegDir(entryIdx);
+            double headingDiff = calcSmallestAngleAbsolute(nextDir, robotHeading);
+            manager->getStream().setRedisValue("pc.bt.heading_diff", to_string(headingDiff));
+
             if (maneuverActive) {
-                // Locked: only advance when robot is aligned with the next segment's entry direction
-                int entryIdx = traject->getSegmentBoundary(nextSeg).first;
-                double nextDir = linearSegDir(entryIdx);
-                double headingDiff = calcSmallestAngleAbsolute(nextDir, robotHeading);
-                manager->getStream().setRedisValue("pc.bt.heading_diff", to_string(headingDiff));
-                if (headingDiff < headingThreshold) {
+                // Locked: only unlock when the robot has physically crossed the segment
+                // boundary (no lookahead) AND heading is aligned with the next segment
+                if (segmentIndexExact > lastSegmentIndex && headingDiff < headingThreshold) {
                     effectiveSegmentIndex = nextSeg;
                     maneuverActive = false;
                     LoggerStream::getInstance() << INFO << "Maneuver complete, advancing to segment " << nextSeg;
                 }
                 // else: stay locked
             } else {
-                // Free advancement: allow entering the next segment
+                // Free advancement via lookahead
                 effectiveSegmentIndex = nextSeg;
             }
         }
@@ -169,7 +175,6 @@ void NavigationControl::update(AlgorithmMode algorithmMode, bool firstTime) {
             lastSegmentIndex = effectiveSegmentIndex;
             segmentIndex = effectiveSegmentIndex;
 
-            // Lock when entering a segment misaligned — released once heading matches the next segment
             double currentSegDir = linearSegDir(traject->getSegmentBoundary(effectiveSegmentIndex).first);
             double misalignment = calcSmallestAngleAbsolute(currentSegDir, robotHeading);
             LoggerStream::getInstance() << INFO << "Segment ->" << effectiveSegmentIndex

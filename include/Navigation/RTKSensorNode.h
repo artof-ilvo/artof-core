@@ -14,7 +14,7 @@ namespace Core {
         RTKSensorNode(Utils::Redis::VariableManager* manager);
         ~RTKSensorNode() = default;
 
-        Eigen::Vector3d getOffset(Utils::Settings::Traject& traject) override;
+        Eigen::Vector3d getOffset() override;
         double accuracy() override;
     };
 }

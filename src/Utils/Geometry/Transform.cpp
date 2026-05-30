@@ -132,6 +132,7 @@ json Ilvo::Utils::Geometry::matrixToJson(Matrix3d m)
 
 Matrix3d Ilvo::Utils::Geometry::jsonToMatrix(json j_)
 {
+    if (!j_.is_array() || j_.empty() || !j_[0].is_array()) return Matrix3d::Identity();
     int numCols = j_[0].size();
     int numRows = j_.size();
     Matrix3d m(numRows, numCols);
