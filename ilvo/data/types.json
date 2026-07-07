@@ -139,7 +139,8 @@
     },
     "field": {
         "name": "string",
-        "updated": "bool"
+        "updated": "bool",
+        "download": "bool"
     },
     "implement": {
         "slow_down": "bool",

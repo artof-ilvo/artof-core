@@ -109,6 +109,13 @@ void GpsDevice::serverTick() {
     int hrp_mode = lines->hrp->getValue<int>("mode");
     getVariable("pc.gps.hrp_mode")->setValue<double>(hrp_mode);
 
+    // Forward GPS parameters to the PC
+    getVariable("plc.control.gps.fix")->setValue<int>(fix);
+    getVariable("plc.control.gps.lattitude")->setValue<double>(lat);
+    getVariable("plc.control.gps.longitude")->setValue<double>(lng);
+    getVariable("plc.control.gps.altitude")->setValue<double>(height);
+
+
     if ( !getVariable("pc.simulation.active")->getValue<bool>() ) {
         State rawState(rawT, rawR, rawTCov, rawRCov);
         Vector3d r = rawState.getR().asVector();

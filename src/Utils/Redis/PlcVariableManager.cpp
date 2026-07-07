@@ -159,10 +159,12 @@ void PlcVariableManager::writeControlValuesToPlc()
         0x00, 0x00,
         
         // number of variables = 1 (2 bytes)
-        0x2D, 0x00, 
+        // TODO add the number of variables as a variable
+        0x31, 0x00, 
         
         // length = 82 bytes (header 20 + data [data size]) (2 bytes - Little Endian or Network Byte Order 18 00? Assuming Little Endian from input: 18 00)
-        0x4B, 0x00
+        // TODO add the number of bytes as a variable
+        0x59, 0x00
         
         // Note: The total bytes added is 4 + 4 + 2 + 2 + 2 + 2 = 16 bytes. 
         // Let's check the input again:
