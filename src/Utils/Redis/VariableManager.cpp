@@ -248,21 +248,13 @@ void VariableManager::setRedisJsonStates(Platform& platform, State& rawState)
     json hitchRefStates = json();
     for (Hitch& h: platform.hitches) {
         string entityName = h.getEntityName();
-        string hitchAngleName = "plc.monitor." + entityName + ".angle";
-        string hitchHeightName = "plc.monitor." + entityName + ".height";
-        string hitchBusyName = "plc.monitor." + entityName + ".busy";
-        string hitchActivateName = "plc.control." + entityName + ".activate";
-
-        double hitchAngle =  existsVariable(hitchAngleName) ? getVariable(hitchAngleName)->getValue<double>() : 0.0;
-        double hitchHeight =  existsVariable(hitchHeightName) ? getVariable(hitchHeightName)->getValue<double>() : 0.0;
-        bool hitchBusy =  existsVariable(hitchBusyName) ? getVariable(hitchBusyName)->getValue<bool>() : false;
-        bool hitchActivate =  existsVariable(hitchActivateName) ? getVariable(hitchActivateName)->getValue<bool>() : false;
-
+        double hitchAngle = h.updateAngle(this);
+        
         hitchRefStates[entityName] = h.toStateFullJson(hitchAngle, platform.gps.utm_zone);
         hitchRefStates[entityName]["angle"] = hitchAngle;
-        hitchRefStates[entityName]["height"] = hitchHeight;
-        hitchRefStates[entityName]["busy"] = hitchBusy; 
-        hitchRefStates[entityName]["activate"] = hitchActivate;       
+        hitchRefStates[entityName]["height"] = h.updateHeight(this);
+        hitchRefStates[entityName]["busy"] = h.updateBusy(this); 
+        hitchRefStates[entityName]["activate"] = h.updateActivate(this);       
     }
     rs.setRedisJsonValue("hitch.states", hitchRefStates);
 

@@ -70,20 +70,18 @@ void Simulation::serverTick() {
             Task& task = field->getTaskWithType("discrete");
 
             string hitchName = task.getHitch().getEntityName();
-            string activateName = "plc.control." + hitchName + ".activate_discrete";
-            string busyName = "plc.monitor." + hitchName + ".busy";
             string notificationName = "pc.execution.notification";
 
             // detect edges for discrete implementat simulation
-            startDiscreteImplementEdge.detect(getVariable(activateName)->getValue<bool>());
-            busyDiscrImplEdge.detect(getVariable(busyName)->getValue<bool>());
+            startDiscreteImplementEdge.detect(task.getHitch().updateActivateDiscrete(this));
+            busyDiscrImplEdge.detect(task.getHitch().updateBusy(this));
 
             if (!discreteImplementActive && startDiscreteImplementEdge.rising) {
                 discreteImplementActive = true;
-                getVariable(busyName)->setValue<bool>(true);
+                task.getHitch().setBusy(this, true);
                 if (!getVariable("plc.monitor.state.auto")->getValue<bool>()) {
                     // only when not attachted to actual robot, otherwise wait on robot change of busy variable
-                    getVariable(notificationName)->setValue("Setting variable " + busyName + " to false to continue the simulation.");
+                    getVariable(notificationName)->setValue("Setting variable plc.monitor." + hitchName + ".busy to false to continue the simulation.");
                 }
             }
             if (discreteImplementActive) {
@@ -97,7 +95,7 @@ void Simulation::serverTick() {
                     string notification = getVariable(notificationName)->getValue<string>();
                     notificationAcknowledgeEdge.detect(notification == "-");
                     if (notificationAcknowledgeEdge.rising) {
-                        getVariable(busyName)->setValue(false);
+                        task.getHitch().setBusy(this, false);
                     }
                 }
 

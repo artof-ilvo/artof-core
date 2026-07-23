@@ -51,6 +51,21 @@ target_link_libraries(ilvo-docker-utils
   ilvo-logging-utils
 )
 
+
+file(GLOB timingUtilFiles
+    "Timing/*.cpp" 
+)
+add_library(ilvo-timing-utils
+    ${timingUtilFiles}
+)
+
+file(GLOB stringUtilFiles
+    "String/*.cpp" 
+)
+add_library(ilvo-string-utils
+    ${stringUtilFiles}
+)
+
 file(GLOB settingUtilsFiles 
   "Settings/*.cpp" 
   "Geometry/*.cpp" 
@@ -62,12 +77,12 @@ target_link_libraries(ilvo-settings-utils PUBLIC
   ${ADDITIONAL_LINK_LIBRARIES}
   ${CMAKE_SOURCE_DIR}/dependencies/${CMAKE_SYSTEM_PROCESSOR}/static/libshp.a
   ilvo-logging-utils
+  ilvo-timing-utils
+  ilvo-redis-utils
 )
 
 file(GLOB redisUtilFiles
     "Redis/*.cpp"
-    "Timing/*.cpp" 
-    "String/*.cpp" 
 )
 
 add_library(ilvo-redis-utils
@@ -79,4 +94,6 @@ target_link_libraries(ilvo-redis-utils PUBLIC
   snap7-thirdparty
   bprinter-thirdparty
   ilvo-logging-utils
+  ilvo-timing-utils
+  ilvo-string-utils
 )

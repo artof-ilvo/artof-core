@@ -4,8 +4,10 @@
 #include <ThirdParty/Eigen/Geometry>
 
 using namespace Ilvo::Utils::Settings;
+using namespace Ilvo::Utils::Redis;
 using namespace Ilvo::Utils::String;
 using namespace Ilvo::Utils::Geometry;
+using namespace Ilvo::Utils::Timing;
 using namespace Ilvo::Exception;
 using namespace nlohmann;
 using namespace Eigen;
@@ -63,3 +65,119 @@ json Hitch::toStateFullJson(double angle, int zone)
     j["state"]["ball"] = State(getBallState(angle)).toJson(zone);
     return j;
 }
+
+
+void Hitch::setActivate(VariableManager* manager, bool activate) { 
+    this->active = activate; 
+    edgeDetectorActivate.detect(activate);
+    string variableName = "plc.control." + getEntityName() + ".activate";
+    manager->getVariable(variableName)->setValue(activate);
+
+    // Hitch moving detection
+    if (hitchMoving) {
+        double height = updateHeight(manager);
+        double setpoint = (double) updateSetpoint(manager);
+        if (abs(height - setpoint) <= 5.0) {
+            hitchMoving = false;
+        }
+    } else {
+        hitchMoving = edgeDetectorActivate.rising || edgeDetectorActivate.falling;
+    }
+}
+
+void Hitch::setActivateDiscrete(VariableManager* manager,bool activate) { 
+    this->activate_discrete = activate; 
+    string variableName = "plc.control." + getEntityName() + ".activate_discrete";
+    manager->getVariable(variableName)->setValue(activate);
+}
+
+void Hitch::setActivateCardan(VariableManager* manager,bool activate) { 
+    this->activate_cardan = activate; 
+    string variableName = "plc.control." + getEntityName() + ".activate_cardan";
+    manager->getVariable(variableName)->setValue(activate);
+}
+
+void Hitch::setActivateContinuous(VariableManager* manager,bool activate) { 
+    this->activate_continuous = activate; 
+    string variableName = "plc.control." + getEntityName() + ".activate_continuous";
+    manager->getVariable(variableName)->setValue(activate);
+}
+
+void Hitch::setBusy(VariableManager* manager, bool busy) { 
+    this->busy = busy; 
+    string variableName = "plc.control." + getEntityName() + ".busy";
+    manager->getVariable(variableName)->setValue(busy);
+}
+
+bool Hitch::updateActivate(VariableManager* manager) { 
+    string variableName = "plc.control." + getEntityName() + ".activate";
+    active = manager->existsVariable(variableName) ? manager->getVariable(variableName)->getValue<bool>() : false;
+    return getActive();
+}
+
+bool Hitch::updateActivateDiscrete(VariableManager* manager) { 
+    string variableName = "plc.control." + getEntityName() + ".activate_discrete";
+    activate_discrete = manager->existsVariable(variableName) ? manager->getVariable(variableName)->getValue<bool>() : false;
+    return getActivateDiscrete();
+}
+
+bool Hitch::updateBusy(VariableManager* manager) { 
+    string variableName = "plc.control." + getEntityName() + ".busy";
+    busy = manager->existsVariable(variableName) ? manager->getVariable(variableName)->getValue<bool>() : false;
+    return getBusy();
+}
+
+int Hitch::updateSetpoint(VariableManager* manager) { 
+    string variableName = "plc.control." + getEntityName() + ".setpoint";
+    setpoint = manager->existsVariable(variableName) ? manager->getVariable(variableName)->getValue<int>() : 0;
+    return getSetpoint();
+}
+
+double Hitch::updateHeight(VariableManager* manager) { 
+    string variableName = "plc.control." + getEntityName() + ".height";
+    height = manager->existsVariable(variableName) ? manager->getVariable(variableName)->getValue<double>() : 0.0;
+    return getHeight();
+}
+
+double Hitch::updateAngle(VariableManager* manager) { 
+    string variableName = "plc.control." + getEntityName() + ".angle";
+    angle = manager->existsVariable(variableName) ? manager->getVariable(variableName)->getValue<double>() : 0.0;
+    return getAngle();
+}
+
+bool Hitch::getActive() { 
+    return active; 
+}
+
+bool Hitch::getActivateDiscrete() { 
+    return activate_discrete; 
+}
+
+bool Hitch::getActivateCardan() { 
+    return activate_cardan; 
+}
+
+bool Hitch::getActivateContinuous() { 
+    return activate_continuous; 
+}
+
+bool Hitch::getBusy() { 
+    return busy; 
+}
+
+int Hitch::getSetpoint() { 
+    return setpoint; 
+}
+
+double Hitch::getHeight() { 
+    return height; 
+}
+
+double Hitch::getAngle() { 
+    return angle; 
+}
+
+bool Hitch::getHitchMoving() {
+    return hitchMoving;
+}
+

@@ -103,7 +103,7 @@ void Navigation::serverTick()
     // update redis operation
     getVariable("plc.control.navigation.heartbeat")->setValue<bool>(heartbeatPulse.getValue());
 
-    // check if hitch is busy
+    // check if hitch is busy, this is for discrete implements where additional processing is done on the implement.
     bool hitchBusy = false;
     for (auto &hitch : platform.hitches) {
         hitchBusy |= getVariable("plc.monitor." + hitch.getEntityName() + ".busy")->getValue<bool>();

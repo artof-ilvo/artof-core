@@ -47,6 +47,10 @@ void ImplementControl::update(bool autoMode)
 
         if (task.isType("hitch")) {
             updateHitch(task);
+            // Slow down when there is a hitch moving.
+            if (task.getHitch().getHitchMoving()) {
+                    manager->getVariable("pc.implement.slow_down")->setValue(false);
+            }
         } else if (task.isType("discrete") && autoMode) {
             updateDiscrete(task); 
         } else if (task.isType("cardan") ) {
@@ -77,20 +81,11 @@ void ImplementControl::reset()
         LoggerStream::getInstance() << INFO << " - Resetting hitch: " << hitch.getEntityName();
         string entityName = hitch.getEntityName();
 
-        // discrete
-        manager->getVariable("plc.control." + entityName + ".activate_discrete")->setValue(false);
-
-        // hitch
-        manager->getVariable("plc.control." + entityName + ".activate")->setValue(false);
-
-        // cardan
-        manager->getVariable("plc.control." + entityName + ".activate_cardan")->setValue(false);
-
-        // continous ImplementControl
-        manager->getVariable("plc.control." + entityName + ".activate_continuous")->setValue(false);
-
-        // busy ImplementControl
-        manager->getVariable("plc.monitor." + entityName + ".busy")->setValue(false);
+        hitch.setActivateDiscrete(manager, false);
+        hitch.setActivateCardan(manager, false);
+        hitch.setActivateContinuous(manager, false);
+        hitch.setActivate(manager, false);
+        hitch.setBusy(manager, false);
     }
 
     // Reset other parameters
@@ -117,7 +112,7 @@ void ImplementControl::updateHitch(Task& task) {
             }
             
             active = task.insideTaskMap(fistOperationSection, disableImplement);
-            manager->getVariable("plc.control." + entityName + ".activate")->setValue(active); 
+            task.getHitch().setActivate(manager, active);
             return;
         }
     }
@@ -125,26 +120,20 @@ void ImplementControl::updateHitch(Task& task) {
     // else for hitch or discrete task
     // if (task.isType("hitch")) {
     active = task.hitchInTaskMap()  && !disableImplement;
-    manager->getVariable("plc.control." + entityName + ".activate")->setValue(active);  
+    task.getHitch().setActivate(manager, active);
     // }
 }
 
 void ImplementControl::updateContinuous(Task& task) 
 {
-    string activateName = "plc.control." + task.getHitch().getEntityName() + ".activate_continuous";
-
     bool active = task.updateSections(manager, disableImplement);
-
-    manager->getVariable(activateName)->setValue(active);
+    task.getHitch().setActivate(manager, active);
 } 
 
 void ImplementControl::updateCardan(Task& task) 
 {
-    string activateName = "plc.control." + task.getHitch().getEntityName() + ".activate_cardan";
-
     bool active = task.cardanEnabled(manager, disableImplement);
-
-    manager->getVariable(activateName)->setValue(active);
+    task.getHitch().setActivateCardan(manager, active);
 } 
 
 void ImplementControl::updateDiscrete(Task& task)
@@ -168,7 +157,7 @@ void ImplementControl::updateDiscrete(Task& task)
             LoggerStream::getInstance() << DEBUG <<"pathDistanceToNextPoint: " << pathDistanceToNextPoint << " - SLOW_DOWN -> MEASURING";
             traject->incrDiscrPoint(task); // increment the discrete point
             measuringDiscreteStarted = false;
-            manager->getVariable("plc.control." + task.getHitch().getEntityName() + ".activate")->setValue(true);
+            task.getHitch().setActivate(manager, true);
             currentDiscrImplState = MEASURING;
         } else if (abs(pathDistanceToNextPoint) > 1.5) {
             currentDiscrImplState = DRIVING;
@@ -178,19 +167,19 @@ void ImplementControl::updateDiscrete(Task& task)
         // generate block pulse of 500ms
         if (!measuringDiscreteStarted) {            
             if ( pulseGenerator.generatePulse(500ms) ) {
-                manager->getVariable("plc.control." + task.getHitch().getEntityName() + ".activate_discrete")->setValue(true);
+                task.getHitch().setActivateDiscrete(manager, true);
             } else {
                 measuringDiscreteStarted = true;
             }
         } else {
-            manager->getVariable("plc.control." + task.getHitch().getEntityName() + ".activate_discrete")->setValue(false);
+            task.getHitch().setActivateDiscrete(manager, false);
             bool discreteImplementActive = manager->getVariable("plc.monitor." + task.getHitch().getEntityName() + ".busy")->getValue<bool>();
 
             busyDiscrImplEdge.detect(discreteImplementActive);
             if (busyDiscrImplEdge.falling) {
                 LoggerStream::getInstance() << DEBUG <<"MEASURING -> DRIVING";
                 manager->getVariable("pc.implement.slow_down")->setValue(false);
-                manager->getVariable("plc.control." + task.getHitch().getEntityName() + ".activate")->setValue(false);
+                task.getHitch().setActivate(manager, false);
                 currentDiscrImplState = DRIVING;
             }
         }
