@@ -22,6 +22,7 @@ using namespace nlohmann;
 using namespace boost::filesystem;
 
 ImplementControl::ImplementControl() : 
+    platform(Platform::getInstance()),
     measuringDiscreteStarted(false),
     currentDiscrImplState(DRIVING)
 {
@@ -77,7 +78,7 @@ void ImplementControl::reset()
     }
 
     // Reset all the hitches
-    for (Hitch& hitch: manager->getPlatform().hitches) {
+    for (Hitch& hitch: platform.hitches) {
         LoggerStream::getInstance() << INFO << " - Resetting hitch: " << hitch.getEntityName();
         string entityName = hitch.getEntityName();
 

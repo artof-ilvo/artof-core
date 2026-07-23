@@ -12,6 +12,7 @@
 
 #include <Utils/Redis/VariableManager.h>
 #include <Utils/Docker/DockerClient.h>
+#include <Utils/Settings/Platform.h>
 #include <Utils/Timing/Logic.h>
 #include <System/IlvoProcess.h>
 #include <System/IlvoAddon.h>
@@ -33,6 +34,7 @@ namespace Core {
     class SystemManager: public Utils::Redis::VariableManager 
     {
     private:
+        Utils::Settings::Platform& platform;
         bool running;
         bool updateCommand;
         std::string startTimeISO;

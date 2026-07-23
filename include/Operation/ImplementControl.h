@@ -35,6 +35,8 @@ namespace Core {
     class ImplementControl
     {
     private:
+        /** @brief Platform settings */
+        Utils::Settings::Platform& platform;
         /** @brief Variable manager (reference to Navigation) */
         Utils::Redis::VariableManager* manager;
         /** @brief The traject the robot should follow during navigation */

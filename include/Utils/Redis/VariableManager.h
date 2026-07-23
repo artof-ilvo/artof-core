@@ -14,8 +14,8 @@
 #include <Utils/Redis/RedisStream.h>
 #include <Utils/String/String.h>
 #include <Exceptions/RedisExceptions.hpp>
-#include <Utils/Settings/Platform.h>
 #include <Utils/Timing/Logic.h>
+#include <Utils/Settings/State.h>
 
 namespace Ilvo {
 namespace Utils {
@@ -34,8 +34,6 @@ namespace Redis {
         std::string processName;
         /** @brief Period of the process */
         Utils::Timing::Clk clk;
-        /** @brief Platform settings */
-        Utils::Settings::Platform& platform;
 
         /** 
          * @brief Pulse generator for heartbeat
@@ -67,9 +65,6 @@ namespace Redis {
         VariableManager(std::string processName);
         virtual ~VariableManager() = default;
         
-        // platform
-        Utils::Settings::Platform& getPlatform();
-
         // Variable getters and setters by type
         /** @brief Read all redis variables */
         void readRedisVariables();
@@ -82,10 +77,6 @@ namespace Redis {
         /** @brief Check if a redis variable key exists */
         bool existsVariable(std::string key);
         
-        /** @brief Set redis json states */
-        void setRedisJsonStates(Settings::Platform& platform, Settings::State& rawState); 
-        /** @brief Set redis json states */
-        void setRedisJsonStatus(Settings::Platform& platform); 
         /** @brief Get redis json states */
         Settings::State getRedisState(std::string name);
 

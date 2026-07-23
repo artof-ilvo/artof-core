@@ -29,6 +29,8 @@ namespace Core {
     class Operation: public Utils::Redis::VariableManager
     {
     private:       
+        /** @brief Platform settings */
+        Utils::Settings::Platform& platform;
         // edge detectors
         /** @brief Edge detector for field updates */
         Utils::Timing::EdgeDetector edgeDetectorField;

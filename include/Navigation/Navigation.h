@@ -17,6 +17,7 @@
 #include <Navigation/NavigationControl.h>
 #include <Utils/Timing/Logic.h>
 #include <Utils/Redis/VariableManager.h>
+#include <Utils/Settings/Platform.h>
 
 namespace Ilvo {
 namespace Core {
@@ -30,6 +31,8 @@ namespace Core {
     class Navigation: public Utils::Redis::VariableManager
     {
     private:       
+        /** @brief Platform settings */
+        Utils::Settings::Platform& platform;
         // edge detectors
         /** @brief Edge detector for field updates */
         Utils::Timing::EdgeDetector edgeDetectorField;

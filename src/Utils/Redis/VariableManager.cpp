@@ -42,7 +42,6 @@ VariableManager::VariableManager(string processName) :
 VariableManager::VariableManager(string processName, chrono::milliseconds processPeriod):
     processName(processName),
     clk(Clk{processPeriod}),
-    platform(Platform::getInstance()),
     heartbeatPulse(500ms)
 {
     LoggerStream::getInstance() << INFO << "### \t Welcome to the stdout of process \'" << processName << "\'! \t ###";
@@ -72,11 +71,6 @@ VariableManager::VariableManager(string processName, chrono::milliseconds proces
     rs = RedisStream(jConfig["protocols"]["redis"]);
     // Load variables
     this->load();
-}
-
-Platform& VariableManager::getPlatform()
-{
-    return platform;
 }
 
 void VariableManager::load()
@@ -235,85 +229,6 @@ RedisStream& VariableManager::getStream()
     return rs;
 }
 
-void VariableManager::setRedisJsonStates(Platform& platform, State& rawState)
-{
-    // states
-    rs.setRedisJsonValue("gps.raw.state", rawState.toJson(platform.gps.utm_zone));                   
-    rs.setRedisJsonValue("gps.ref.state", platform.gps.getState().toJson(platform.gps.utm_zone));                   
-    rs.setRedisJsonValue("robot.ref.state", platform.robot.getState().toJson(platform.gps.utm_zone));                   
-    rs.setRedisJsonValue("robot.center.state", platform.robot.getCenterState().toJson(platform.gps.utm_zone));                   
-    rs.setRedisJsonValue("robot.head.state", platform.robot.getHeadState().toJson(platform.gps.utm_zone));                   
-
-    // hitch
-    json hitchRefStates = json();
-    for (Hitch& h: platform.hitches) {
-        string entityName = h.getEntityName();
-        double hitchAngle = h.updateAngle(this);
-        
-        hitchRefStates[entityName] = h.toStateFullJson(hitchAngle, platform.gps.utm_zone);
-        hitchRefStates[entityName]["angle"] = hitchAngle;
-        hitchRefStates[entityName]["height"] = h.updateHeight(this);
-        hitchRefStates[entityName]["busy"] = h.updateBusy(this); 
-        hitchRefStates[entityName]["activate"] = h.updateActivate(this);       
-    }
-    rs.setRedisJsonValue("hitch.states", hitchRefStates);
-
-    // contours
-    json contours = json();
-    Polygon polygonRobot;
-    polygonRobot.update(platform.robot.centerState.asAffine(), platform.robot.width, platform.robot.length);
-    vector<vector<double>> robotLatLng;
-    vector<vector<double>> robotXY;
-    polygonRobot.contour(robotLatLng, robotXY, platform.gps.utm_zone);
-    contours["latlng"] = robotLatLng;
-    contours["xy"] = robotXY;
-    rs.setRedisJsonValue("robot.contour", contours);
-}
-
-void VariableManager::setRedisJsonStatus(Platform& platform)
-{
-    // status
-    json errorJson;
-    double distance_error = getVariable("pc.path.distance_error")->getValue<double>();
-    double navAbsError = abs(distance_error);
-    stringstream ss;
-    ss << std::fixed << std::setprecision(2);
-    if (navAbsError <= 1.0) {
-        ss << navAbsError * 100 << " cm";
-    } else {
-        ss << min(navAbsError, 99.0) << " m";
-    }
-    errorJson["value"] = ss.str();
-    errorJson["positive"] = (distance_error > 0 ? navAbsError : 0);
-    errorJson["negative"] = (distance_error < 0 ? navAbsError : 0);  
-
-    json statusJson;
-    statusJson["error"] = errorJson;
-    statusJson["simulation_active"] = getVariable("pc.simulation.active")->getValue<bool>();
-    statusJson["fix"] = fixNumber[getVariable("pc.gps.fix")->getValue<int>()];
-    statusJson["notification"] = getVariable("pc.execution.notification")->getValue<string>();
-    statusJson["heartbeat"] = getVariable("plc.control.navigation.heartbeat")->getValue<bool>();
-
-    if (existsVariable("plc.monitor.power_source.data.soc")) {
-        statusJson["power_level"] = getVariable("plc.monitor.power_source.data.soc")->getValue<double>();
-    } else if (existsVariable("plc.monitor.power_source.data.level")) {
-        statusJson["power_level"] = getVariable("plc.monitor.power_source.data.level")->getValue<double>();
-    } else {
-        statusJson["power_level"] = 0.0;
-    }
-    for (AutoMode state: platform.auto_modes) {
-        if (getVariable("pc.simulation.active")->getValue<bool>()) {
-           statusJson["current_state"] = getVariable("pc.simulation.auto")->getValue<bool>() ? "auto" : "normal" ;
-        } else {
-            if (getVariable("plc.monitor.state." + state.name)->getValue<bool>()) {
-                statusJson["current_state"] = state.name;
-                break;
-            }
-        }
-    }
-    rs.setRedisJsonValue("robot.status", statusJson);
-}
-
 
 State VariableManager::getRedisState(string name)
 {
@@ -329,9 +244,4 @@ State VariableManager::getRedisState(string name)
     } else {
         return State(jState);
     }
-}
-
-void VariableManager::updatePlatformState()
-{
-    platform.updateState(getRedisState("gps.raw").asAffine());
 }

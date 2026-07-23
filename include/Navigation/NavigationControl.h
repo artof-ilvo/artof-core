@@ -36,6 +36,8 @@ namespace Core {
     class NavigationControl
     {
     private:
+        /** @brief Platform settings */
+        Utils::Settings::Platform& platform;
         /** @brief Variable manager (reference to Navigation) */
         Utils::Redis::VariableManager* manager;
         /** @brief The traject the robot should follow during navigation */
@@ -106,7 +108,7 @@ namespace Core {
         /** @brief The robot drives to a specific position */
         bool creepToPosition();
     public:
-        NavigationControl() = default;
+        NavigationControl();
         ~NavigationControl() = default;
 
         /** @brief Reset the field */

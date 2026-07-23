@@ -34,6 +34,7 @@ namespace Core {
          * 
          * @details If a pulse of the field update variable is detected the new field is loaded
          */
+        Utils::Settings::Platform& platform;
         Utils::Timing::EdgeDetector edgeDetectorField;
         std::shared_ptr<Utils::Settings::Field> field;
 

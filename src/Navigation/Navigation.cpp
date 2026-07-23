@@ -22,6 +22,7 @@ using namespace boost::filesystem;
 
 Navigation::Navigation(const string ns) : 
     VariableManager(ns),
+    platform(Platform::getInstance()),
     autoModeReset(false),
     autoModeError(false)
 { 
@@ -37,7 +38,7 @@ void Navigation::init()
 
 void Navigation::updatePosition()
 {
-    updatePlatformState();
+    platform.updateState(this);
     // update robot state
     position->robotRefState = platform.robot.getState();
     position->currentPoint = position->robotRefState.getT();
@@ -123,7 +124,7 @@ void Navigation::serverTick()
         // load the traject
         algorithmMode = static_cast<AlgorithmMode>(getVariable("pc.navigation.mode")->getValue<int>());
         traject->load(Field::checkFieldName(getVariable("pc.field.name")->getValue<string>()), 
-                    getPlatform().gps.utm_zone, 
+                    platform.gps.utm_zone, 
                     getVariable("pc.navigation.spin_angle")->getValue<double>(),
                     getVariable("pc.purepursuit.inter_point_distance")->getValue<double>(),
                     getVariable("pc.navigation.turning_radius")->getValue<double>(),
@@ -227,7 +228,7 @@ void Navigation::serverTick()
 
     // TODO also add position data
     getStream().setRedisJsonValue("navigation.controller.info", position->toJson(platform.gps.utm_zone));
-    setRedisJsonStatus(platform);  
+    platform.setRedisJsonStatus(this);  
 }
 
 int main() {

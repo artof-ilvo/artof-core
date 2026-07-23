@@ -34,6 +34,7 @@ namespace Core {
     class GpsDevice: public Utils::Redis::VariableManager
     {
     private:
+        Utils::Settings::Platform& platform;
         /** @brief Peripheral of the GPS device */
         std::unique_ptr<Utils::Peripheral::Peripheral> peripheral;
         /** @brief Variable keeps track if GPS is found */

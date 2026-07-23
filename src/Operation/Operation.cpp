@@ -21,6 +21,7 @@ using namespace boost::filesystem;
 
 
 Operation::Operation(const string ns) : 
+    platform(Platform::getInstance()),
     VariableManager(ns)
 { 
 }
@@ -51,7 +52,7 @@ void Operation::setRedisJsonImplStates()
 
 void Operation::serverTick() 
 {
-    updatePlatformState();
+    platform.updateState(this);
 
     edgeDetectorField.detect( getVariable("pc.field.updated")->getValue<bool>());
     bool activeAuto = getVariable("pc.simulation.auto")->getValue<bool>() || getVariable("plc.monitor.state.auto")->getValue<bool>();
@@ -59,7 +60,7 @@ void Operation::serverTick()
 
     if (edgeDetectorField.rising || traject->empty()) {
         traject->load(Field::checkFieldName(getVariable("pc.field.name")->getValue<string>()), 
-                    getPlatform().gps.utm_zone, 
+                    platform.gps.utm_zone, 
                     getVariable("pc.navigation.spin_angle")->getValue<double>(),
                     getVariable("pc.purepursuit.inter_point_distance")->getValue<double>(),
                     getVariable("pc.navigation.turning_radius")->getValue<double>());

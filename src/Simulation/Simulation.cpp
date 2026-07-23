@@ -21,7 +21,9 @@ using namespace Eigen;
 
 
 Simulation::Simulation(const string ns) : 
-    VariableManager(ns), discreteImplementActive(false)
+    VariableManager(ns), 
+    platform(Platform::getInstance()),
+    discreteImplementActive(false)
 {}
 
 void Simulation::init() {
@@ -114,7 +116,7 @@ void Simulation::serverTick() {
             State newRawGpsState = platform.applyVelocityOnRobotRef(velTransform);
 
             // ** SET NEW STATE **
-            setRedisJsonStates(platform, newRawGpsState);  
+            platform.setRedisJsonStates(this, newRawGpsState);  
         } 
     } 
 }

@@ -21,6 +21,7 @@ using namespace nlohmann;
 
 GpsDevice::GpsDevice(const string ns) : 
     VariableManager(ns, 2ms), 
+    platform(Platform::getInstance()),
     gpsfound(false)
 {
 }
@@ -30,7 +31,7 @@ void GpsDevice::init() {
     // set raw state to zero
     State rawState(Vector3d::Zero(), Vector3d::Zero(), Vector3d::Zero(), Vector3d::Zero());
     platform.updateState(rawState.asAffine());
-    setRedisJsonStates(platform, rawState);
+    platform.setRedisJsonStates(this, rawState);
 
     // Connect to gps platform
     if (platform.gps.device.compare("socket") == 0) {
@@ -129,7 +130,7 @@ void GpsDevice::serverTick() {
 
 
         platform.updateState(rawState.asAffine());
-        setRedisJsonStates(platform, rawState);
+        platform.setRedisJsonStates(this, rawState);
     }
 
 }

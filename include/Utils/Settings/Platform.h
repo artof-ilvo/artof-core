@@ -10,6 +10,7 @@
  */
 #pragma once
 
+#include <Utils/Redis/VariableManager.h>
 #include <ThirdParty/json.hpp>
 #include <Utils/Geometry/Point.h>
 #include <Utils/Settings/Robot.h>
@@ -111,6 +112,11 @@ namespace Settings {
         Eigen::Affine3d applyVelocityOnRobotRef(Eigen::Affine3d velTransform); 
 
         nlohmann::json toJson() const;
+        void updateState(Redis::VariableManager* manager);
+        /** @brief Set redis json states */
+        void setRedisJsonStates(Redis::VariableManager* manager, Settings::State& rawState); 
+        /** @brief Set redis json states */
+        void setRedisJsonStatus(Redis::VariableManager* manager); 
     };
     inline std::ostream& operator<<(std::ostream& os, const Platform& p) {
         os << p.toJson().dump();

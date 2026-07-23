@@ -1,4 +1,5 @@
 #include <Utils/Settings/Platform.h>
+#include <Utils/Geometry/Polygon.h>
 #include <Utils/Logging/LoggerStream.h>
 #include <ThirdParty/json.hpp>
 #include <boost/filesystem.hpp>
@@ -9,6 +10,7 @@
 #include <string> 
 
 using namespace Ilvo::Utils::Settings;
+using namespace Ilvo::Utils::Redis;
 using namespace Ilvo::Utils::Geometry;
 using namespace Ilvo::Utils::Logging;
 using namespace Ilvo::Exception;
@@ -198,4 +200,88 @@ json Velocity::toJson() const {
     j["min"] = min;
     j["max"] = max;
     return j;
+}
+
+void Platform::updateState(VariableManager* manager)
+{
+    updateState(manager->getRedisState("gps.raw").asAffine());
+}
+
+void Platform::setRedisJsonStates(VariableManager* manager, State& rawState)
+{
+    // states
+    manager->getStream().setRedisJsonValue("gps.raw.state", rawState.toJson(gps.utm_zone));                   
+    manager->getStream().setRedisJsonValue("gps.ref.state", gps.getState().toJson(gps.utm_zone));                   
+    manager->getStream().setRedisJsonValue("robot.ref.state", robot.getState().toJson(gps.utm_zone));                   
+    manager->getStream().setRedisJsonValue("robot.center.state", robot.getCenterState().toJson(gps.utm_zone));                   
+    manager->getStream().setRedisJsonValue("robot.head.state", robot.getHeadState().toJson(gps.utm_zone));                   
+
+    // hitch
+    json hitchRefStates = json();
+    for (Hitch& h: hitches) {
+        string entityName = h.getEntityName();
+        double hitchAngle = h.updateAngle(manager);
+        
+        hitchRefStates[entityName] = h.toStateFullJson(hitchAngle, gps.utm_zone);
+        hitchRefStates[entityName]["angle"] = hitchAngle;
+        hitchRefStates[entityName]["height"] = h.updateHeight(manager);
+        hitchRefStates[entityName]["busy"] = h.updateBusy(manager); 
+        hitchRefStates[entityName]["activate"] = h.updateActivate(manager);       
+    }
+    manager->getStream().setRedisJsonValue("hitch.states", hitchRefStates);
+
+    // contours
+    json contours = json();
+    Polygon polygonRobot;
+    polygonRobot.update(robot.centerState.asAffine(), robot.width, robot.length);
+    vector<vector<double>> robotLatLng;
+    vector<vector<double>> robotXY;
+    polygonRobot.contour(robotLatLng, robotXY, gps.utm_zone);
+    contours["latlng"] = robotLatLng;
+    contours["xy"] = robotXY;
+    manager->getStream().setRedisJsonValue("robot.contour", contours);
+}
+
+void Platform::setRedisJsonStatus(VariableManager* manager)
+{
+    // status
+    json errorJson;
+    double distance_error = manager->getVariable("pc.path.distance_error")->getValue<double>();
+    double navAbsError = abs(distance_error);
+    stringstream ss;
+    ss << std::fixed << std::setprecision(2);
+    if (navAbsError <= 1.0) {
+        ss << navAbsError * 100 << " cm";
+    } else {
+        ss << min(navAbsError, 99.0) << " m";
+    }
+    errorJson["value"] = ss.str();
+    errorJson["positive"] = (distance_error > 0 ? navAbsError : 0);
+    errorJson["negative"] = (distance_error < 0 ? navAbsError : 0);  
+
+    json statusJson;
+    statusJson["error"] = errorJson;
+    statusJson["simulation_active"] = manager->getVariable("pc.simulation.active")->getValue<bool>();
+    statusJson["fix"] = fixNumber[manager->getVariable("pc.gps.fix")->getValue<int>()];
+    statusJson["notification"] = manager->getVariable("pc.execution.notification")->getValue<string>();
+    statusJson["heartbeat"] = manager->getVariable("plc.control.navigation.heartbeat")->getValue<bool>();
+
+    if (manager->existsVariable("plc.monitor.power_source.data.soc")) {
+        statusJson["power_level"] = manager->getVariable("plc.monitor.power_source.data.soc")->getValue<double>();
+    } else if (manager->existsVariable("plc.monitor.power_source.data.level")) {
+        statusJson["power_level"] = manager->getVariable("plc.monitor.power_source.data.level")->getValue<double>();
+    } else {
+        statusJson["power_level"] = 0.0;
+    }
+    for (AutoMode state: auto_modes) {
+        if (manager->getVariable("pc.simulation.active")->getValue<bool>()) {
+           statusJson["current_state"] = manager->getVariable("pc.simulation.auto")->getValue<bool>() ? "auto" : "normal" ;
+        } else {
+            if (manager->getVariable("plc.monitor.state." + state.name)->getValue<bool>()) {
+                statusJson["current_state"] = state.name;
+                break;
+            }
+        }
+    }
+    manager->getStream().setRedisJsonValue("robot.status", statusJson);
 }

@@ -21,6 +21,7 @@ using namespace boost::filesystem;
 
 SystemManager::SystemManager(const string ns) : 
     VariableManager(ns, 400ms),  // Make sure this is smaller than the heartbeat period
+    platform(Platform::getInstance()),
     running(true),
     startTime(chrono::system_clock::now()),
     dockerClient(Utils::Docker::DockerClient())
@@ -139,8 +140,8 @@ void SystemManager::init() {
         // Initialize robot and implement states empty
         LoggerStream::getInstance() << INFO << "Initialize robot states empty.";
         State emptyState;
-        setRedisJsonStates(platform, emptyState);
-        setRedisJsonStatus(platform);  
+        platform.setRedisJsonStates(this, emptyState);
+        platform.setRedisJsonStatus(this);  
 
         // This is the first start up time initilize everything properly
         path p(string(getenv("ILVO_PATH")) + "/redis.init.json");
