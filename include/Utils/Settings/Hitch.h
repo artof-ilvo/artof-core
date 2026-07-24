@@ -74,6 +74,7 @@ private:
     int setpoint;
     // monitor values
     double height;
+    double requestedHeight;
     double angle;
 
     // detect hitch changes

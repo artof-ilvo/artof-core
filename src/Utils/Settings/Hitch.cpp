@@ -2,12 +2,14 @@
 #include <Utils/Geometry/Transform.h>
 #include <Exceptions/RobotExceptions.hpp>
 #include <ThirdParty/Eigen/Geometry>
+#include <Utils/Logging/LoggerStream.h>
 
 using namespace Ilvo::Utils::Settings;
 using namespace Ilvo::Utils::Redis;
 using namespace Ilvo::Utils::String;
 using namespace Ilvo::Utils::Geometry;
 using namespace Ilvo::Utils::Timing;
+using namespace Ilvo::Utils::Logging;
 using namespace Ilvo::Exception;
 using namespace nlohmann;
 using namespace Eigen;
@@ -75,13 +77,20 @@ void Hitch::setActivate(VariableManager* manager, bool activate) {
 
     // Hitch moving detection
     if (hitchMoving) {
-        double height = updateHeight(manager);
-        double setpoint = (double) updateSetpoint(manager);
-        if (abs(height - setpoint) <= 5.0) {
+        updateHeight(manager);
+        if (abs(height - requestedHeight) <= 5.0) {
             hitchMoving = false;
+            LoggerStream::getInstance() << DEBUG <<"Hitch " << getEntityName() << " has stopped moving, height: " << height << ", requestedHeight: " << requestedHeight;
         }
     } else {
-        hitchMoving = edgeDetectorActivate.rising || edgeDetectorActivate.falling;
+        if (edgeDetectorActivate.rising) {
+            hitchMoving = true;
+            requestedHeight = updateSetpoint(manager);
+            LoggerStream::getInstance() << DEBUG <<"Hitch " << getEntityName() << " has started moving, height: " << height << ", requestedHeight: " << requestedHeight;
+        } else if (edgeDetectorActivate.falling) {
+            hitchMoving = true;
+            requestedHeight = 0.0;
+        }
     }
 }
 
@@ -105,7 +114,7 @@ void Hitch::setActivateContinuous(VariableManager* manager,bool activate) {
 
 void Hitch::setBusy(VariableManager* manager, bool busy) { 
     this->busy = busy; 
-    string variableName = "plc.control." + getEntityName() + ".busy";
+    string variableName = "plc.monitor." + getEntityName() + ".busy";
     manager->getVariable(variableName)->setValue(busy);
 }
 
@@ -122,7 +131,7 @@ bool Hitch::updateActivateDiscrete(VariableManager* manager) {
 }
 
 bool Hitch::updateBusy(VariableManager* manager) { 
-    string variableName = "plc.control." + getEntityName() + ".busy";
+    string variableName = "plc.monitor." + getEntityName() + ".busy";
     busy = manager->existsVariable(variableName) ? manager->getVariable(variableName)->getValue<bool>() : false;
     return getBusy();
 }
@@ -134,7 +143,7 @@ int Hitch::updateSetpoint(VariableManager* manager) {
 }
 
 double Hitch::updateHeight(VariableManager* manager) { 
-    string variableName = "plc.control." + getEntityName() + ".height";
+    string variableName = "plc.monitor." + getEntityName() + ".height";
     height = manager->existsVariable(variableName) ? manager->getVariable(variableName)->getValue<double>() : 0.0;
     return getHeight();
 }

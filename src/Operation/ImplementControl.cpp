@@ -49,9 +49,7 @@ void ImplementControl::update(bool autoMode)
         if (task.isType("hitch")) {
             updateHitch(task);
             // Slow down when there is a hitch moving.
-            if (task.getHitch().getHitchMoving()) {
-                    manager->getVariable("pc.implement.slow_down")->setValue(false);
-            }
+            manager->getVariable("pc.implement.slow_down")->setValue(task.getHitch().getHitchMoving());
         } else if (task.isType("discrete") && autoMode) {
             updateDiscrete(task); 
         } else if (task.isType("cardan") ) {
