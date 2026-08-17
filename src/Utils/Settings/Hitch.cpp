@@ -89,7 +89,7 @@ void Hitch::setActivate(VariableManager* manager, bool activate) {
             LoggerStream::getInstance() << DEBUG <<"Hitch " << getEntityName() << " has started moving, height: " << height << ", requestedHeight: " << requestedHeight;
         } else if (edgeDetectorActivate.falling) {
             hitchMoving = true;
-            requestedHeight = 0.0;
+            requestedHeight = 0.0;  // TODO: zo of omgekeerd?
         }
     }
 }

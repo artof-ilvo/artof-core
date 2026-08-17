@@ -112,8 +112,8 @@ void GpsDevice::serverTick() {
 
     // Forward GPS parameters to the PC
     getVariable("plc.control.gps.fix")->setValue<int>(fix);
-    getVariable("plc.control.gps.lattitude")->setValue<double>(lat);
-    getVariable("plc.control.gps.longitude")->setValue<double>(lng);
+    getVariable("plc.control.gps.latitude")->setValue<uint32_t>(lat * 1e6);
+    getVariable("plc.control.gps.longitude")->setValue<uint32_t>(lng * 1e6);
     getVariable("plc.control.gps.altitude")->setValue<double>(height);
 
 

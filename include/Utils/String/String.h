@@ -13,7 +13,9 @@
 #include <vector>
 #include <string>
 #include <iostream>
+#include <iomanip>
 #include <cstdint>
+#include <format>
 
 #include <Exceptions/RedisExceptions.hpp>
 
@@ -43,11 +45,15 @@ namespace String {
                             std::is_same<T, uint32_t>::value || 
                             std::is_same<T, int64_t>::value || 
                             std::is_same<T, uint64_t>::value ||
-                            std::is_same<T, int>::value ||
-                            std::is_same<T, long>::value ||
-                            std::is_same<T, double>::value ||
-                            std::is_same<T, float>::value) {    
+                            std::is_same<T, int>::value) {  
             valueStr = std::to_string(value);
+        } else if constexpr (std::is_same<T, long>::value ||
+                            std::is_same<T, double>::value ||
+                            std::is_same<T, float>::value) {  
+            std::ostringstream stream;
+            stream << std::fixed << std::setprecision(13) << value; // Set to 10 decimal places
+            valueStr = stream.str();
+            // valueStr = std::format("{:.13f}", value);  // TODO voor C++20
         } else {
             throw Exception::RedisTypeNotFoundException(typeid(T).name());
         }
