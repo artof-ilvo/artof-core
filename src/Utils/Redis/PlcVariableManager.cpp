@@ -44,19 +44,48 @@ PlcVariableManager::~PlcVariableManager()
 }
 
 void PlcVariableManager::resetCount() {
-    byteCount = 20;  // account for header bytes
+    if (jConfig["protocols"]["plc"]["protocol"] == "s7") {
+        byteCount = 0;
+    } else if (jConfig["protocols"]["plc"]["protocol"] == "udp") { 
+        bitCount = 20;  // account for header bytes
+    }
     bitCount = 0;
     previousEntity = "";
 }
 
 void PlcVariableManager::beginCount(VariablePtr var) {
-    string newEntity = var->getEntity();
-    previousEntity = newEntity;
+    if (jConfig["protocols"]["plc"]["protocol"] == "s7") {
+        string newEntity = var->getEntity();
+        if (var->getType() != "bool" || newEntity != previousEntity) {
+            if (bitCount != 0) {
+                bitCount = 0;
+                byteCount += 2;
+            }
+        }
+        previousEntity = newEntity;
+    } else if (jConfig["protocols"]["plc"]["protocol"] == "udp") { 
+        string newEntity = var->getEntity();
+        previousEntity = newEntity;
+    }
+
 }
 
 void PlcVariableManager::endCount(VariablePtr var) {
-    bitCount = 0;  // Booleans are full bits
-    byteCount += var->getSize();
+    if (jConfig["protocols"]["plc"]["protocol"] == "s7") {
+        if (var->getType() == "bool") {
+            bitCount += 1;
+            if (bitCount == 8) {
+                bitCount = 0;
+                byteCount += 1;
+            } 
+        } else {
+            bitCount = 0;
+            byteCount += var->getSize();
+        }
+    } else if (jConfig["protocols"]["plc"]["protocol"] == "udp") { 
+        bitCount = 0;  // Booleans are full bits
+        byteCount += var->getSize();
+    }
 }
 
 void PlcVariableManager::setSize(PlcType plcType) 
@@ -281,10 +310,13 @@ void PlcVariableManager::writeControlValuesToPlc()
             unsigned char *val_char = reinterpret_cast<unsigned char*>(&val);
             controlData[byteCount+0] = (unsigned char) (*val_char & 0xFF);
 
-            // unsigned char plcval_curr = controlData[byteCount];
-            // unsigned char plcval_write = (((*val_char) << bitCount) & 0xFF);
-            
-            // controlData[byteCount+0] = plcval_write | plcval_curr;
+            if (jConfig["protocols"]["plc"]["protocol"] == "s7") {
+                // Counts bools as bits with s7
+                unsigned char plcval_curr = controlData[byteCount];
+                unsigned char plcval_write = (((*val_char) << bitCount) & 0xFF);
+                
+                controlData[byteCount+0] = plcval_write | plcval_curr;
+            } 
         } else {
             throw PlcNoSuchDataTypeException(var);
         }
@@ -345,7 +377,11 @@ void PlcVariableManager::readMonitorValuesFromPlc()
             string val(val_data);
             var->setValue(trim(val));
         } else if (var->getType() == "bool") {
-            var->setValue((bool) (monitorData[byteCount+0] & 0x01));
+            if (jConfig["protocols"]["plc"]["protocol"] == "s7") {
+                var->setValue((bool) ((monitorData[byteCount+0] >> bitCount) & 0x01));
+            } else if (jConfig["protocols"]["plc"]["protocol"] == "udp") {
+                var->setValue((bool) (monitorData[byteCount+0] & 0x01));
+            }
         } else {
             throw PlcNoSuchDataTypeException(var);
         }
@@ -370,10 +406,13 @@ void PlcVariableManager::init()
     setSize(PlcType::CONTROL);
     controlData = new unsigned char[controlSize];
     monitorData = new unsigned char[monitorSize];
-    // Create header for udp send data
-    formatUdpHeader();
-    LoggerStream::getInstance() << INFO << "## UDP header ##";
-    printUdpHeader(LoggerStream::getInstance(), udpSendHeader);
+
+    if (jConfig["protocols"]["plc"]["protocol"] == "udp") {
+        // Create header for udp send data
+        formatUdpHeader();
+        LoggerStream::getInstance() << INFO << "## UDP header ##";
+        printUdpHeader(LoggerStream::getInstance(), udpSendHeader);
+    }
 
     LoggerStream::getInstance() << INFO << "-- PLC monitorData is " << monitorSize << " bytes and has " << plcMonitorVariables.size() << " variables.";
     LoggerStream::getInstance() << INFO << "-- PLC controlData is " << controlSize << " bytes and has " << plcControlVariables.size() << " variables.";
