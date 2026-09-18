@@ -79,9 +79,6 @@ void PlcVariableManager::setSize(PlcType plcType)
     } else if (plcType == PlcType::CONTROL) {
         controlSize  = byteCount + (bitCount > 0 ? 1 : 0);
     }
-
-    // monitorSize += 20; // account for udp header
-    // controlSize += 20; // account for udp header
 }
 
 void PlcVariableManager::printRapport(LoggerStream& logger, vector<VariablePtr>& variables)
