@@ -55,7 +55,34 @@ namespace Redis {
 
         /** @brief Summarize all variables and their bit and byte positions in the plc */
         void printRapport(Utils::Logging::LoggerStream& logger, std::vector<VariablePtr>& variables);
+        void printUdpHeader(Utils::Logging::LoggerStream& logger, std::vector<uint8_t>& data);
         void setSize(PlcType plcType);
+
+        std::vector<uint8_t> udpSendHeader = {
+            // NVL UDP identifier (4 bytes)
+            0x00, 0x2d, 0x53, 0x33, 
+            
+            // reserved / flags (4 bytes)
+            0x00, 0x00, 0x00, 0x00, 
+            
+            // publisher ID = 2 (2 bytes - Little Endian or Network Byte Order 02 00? Assuming Little Endian from input: 02 00)
+            0x05, 0x00, 
+            
+            // position = 0 (2 bytes)
+            0x00, 0x00,
+            
+            // number of variables = 1 (2 bytes)
+            // TODO add the number of variables as a variable
+            0x31, 0x00, 
+            
+            // length = 82 bytes (header 20 + data [data size]) (2 bytes - Little Endian or Network Byte Order 18 00? Assuming Little Endian from input: 18 00)
+            // TODO add the number of bytes as a variable
+            0x61, 0x00
+            
+        };
+
+        void formatUdpHeader();
+
     public:
         PlcVariableManager(std::string processName);
         ~PlcVariableManager();

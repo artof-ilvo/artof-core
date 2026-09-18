@@ -3,6 +3,8 @@
 #include <ThirdParty/snap7/snap7.h>
 #include <ThirdParty/ieee754_types.hpp>
 #include <cstddef>
+#include <format> 
+#include <string>
 #include <Exceptions/PlcExceptions.hpp>
 // https://github.com/dattanchu/bprinter/wiki
 #include <ThirdParty/bprinter/table_printer.h>
@@ -42,34 +44,19 @@ PlcVariableManager::~PlcVariableManager()
 }
 
 void PlcVariableManager::resetCount() {
-    byteCount = 20;  // account for udp header
+    byteCount = 20;  // account for header bytes
     bitCount = 0;
     previousEntity = "";
 }
 
 void PlcVariableManager::beginCount(VariablePtr var) {
     string newEntity = var->getEntity();
-    if (var->getType() != "bool" || newEntity != previousEntity) {
-        if (bitCount != 0) {
-            bitCount = 0;
-            byteCount += 2;
-        }
-    }
     previousEntity = newEntity;
 }
 
 void PlcVariableManager::endCount(VariablePtr var) {
-    if (var->getType() == "bool") {
-        // bitCount += 1;
-        // if (bitCount == 8) {
-        //     bitCount = 0;
-        //     byteCount += 1;
-        // } 
-        byteCount += 1;
-    } else {
-        bitCount = 0;
-        byteCount += var->getSize();
-    }
+    bitCount = 0;  // Booleans are full bits
+    byteCount += var->getSize();
 }
 
 void PlcVariableManager::setSize(PlcType plcType) 
@@ -93,8 +80,8 @@ void PlcVariableManager::setSize(PlcType plcType)
         controlSize  = byteCount + (bitCount > 0 ? 1 : 0);
     }
 
-    monitorSize += 20; // account for udp header
-    controlSize += 20; // account for udp header
+    // monitorSize += 20; // account for udp header
+    // controlSize += 20; // account for udp header
 }
 
 void PlcVariableManager::printRapport(LoggerStream& logger, vector<VariablePtr>& variables)
@@ -102,6 +89,7 @@ void PlcVariableManager::printRapport(LoggerStream& logger, vector<VariablePtr>&
     stringstream s;
     s << endl;
     TablePrinter tp(&s);
+    tp.AddColumn("Variable", 10);
     tp.AddColumn("Key", 50);
     tp.AddColumn("Group", 15);
     tp.AddColumn("Entity", 15);
@@ -111,7 +99,9 @@ void PlcVariableManager::printRapport(LoggerStream& logger, vector<VariablePtr>&
 
     resetCount();
     tp.PrintHeader();
+    int cnt = 0;
     for (VariablePtr var: variables) {
+        tp << cnt++;
         beginCount(var);
 
         string byteBitStr = (var->getPlcType() != PlcType::NONE) ? to_string(byteCount) + "." + to_string(bitCount) : "";
@@ -136,6 +126,76 @@ void PlcVariableManager::printRapport(LoggerStream& logger, vector<VariablePtr>&
     logger << s.str();
 }
 
+void PlcVariableManager::printUdpHeader(LoggerStream& logger, std::vector<uint8_t>& data)
+{
+    stringstream s;
+    s << endl;
+    TablePrinter tp(&s);
+    tp.AddColumn("ID", 20);
+    tp.AddColumn("Hex", 15);
+    tp.AddColumn("Dec", 5);
+
+    auto format_bytes = [](const std::vector<uint8_t>& b) -> std::string {
+        stringstream ss;
+        for (size_t i = 0; i < b.size(); ++i) {
+            ss << std::format("{:02X}", b[i]);
+            if (i < b.size() - 1) {
+                ss << " ";
+            }
+        }
+        return ss.str();
+    };
+
+    auto bytes_to_number = [](const std::vector<uint8_t>& b) -> uint16_t {
+        return static_cast<uint16_t>(b[0]) |
+              (static_cast<uint16_t>(b[1]) << 8);
+    };
+
+    tp.PrintHeader();
+    
+    tp << "NVL UDP";
+    tp << format_bytes({data[0], data[1], data[2], data[3]});
+    tp << "";
+
+    tp << "Reversed / Flags";
+    tp << format_bytes({data[4], data[5], data[6], data[7]});
+    tp << "";
+
+    tp << "Publisher ID";
+    tp << format_bytes({data[8], data[9]});
+    tp << bytes_to_number({data[8], data[9]});
+
+    tp << "Position";
+    tp << format_bytes({data[10], data[11]});
+    tp << bytes_to_number({data[10], data[11]});
+
+    tp << "Number of variables";
+    tp << format_bytes({data[12], data[13]});
+    tp << bytes_to_number({data[12], data[13]});
+
+    tp << "Number of bytes";
+    tp << format_bytes({data[14], data[15]});
+    tp << bytes_to_number({data[14], data[15]});
+
+    tp.PrintFooter();
+    logger << s.str();
+}
+
+void PlcVariableManager::formatUdpHeader()
+{
+    // Change number of variable
+    uint16_t numVars = plcControlVariables.size();
+    unsigned char *numVars_char = reinterpret_cast<unsigned char*>(&numVars);
+    udpSendHeader[12] = (unsigned char) (*numVars_char & 0xFF);
+    udpSendHeader[13] = (unsigned char) ((*numVars_char >> 8) & 0xFF);
+
+    // Change number of bytes
+    uint16_t numBytes = controlSize; 
+    unsigned char *numBytes_char = reinterpret_cast<unsigned char*>(&numBytes);
+    udpSendHeader[14] = (unsigned char) (*numBytes_char & 0xFF);
+    udpSendHeader[15] = (unsigned char) ((*numBytes_char >> 8) & 0xFF);
+}
+
 void PlcVariableManager::writeControlValuesToPlc()
 {
     // make sure array is empty
@@ -144,44 +204,8 @@ void PlcVariableManager::writeControlValuesToPlc()
     }
 
     // Add header data
-    // The byte sequence for the header (20 bytes total)
-    std::vector<uint8_t> header_bytes = {
-        // NVL UDP identifier (4 bytes)
-        0x00, 0x2d, 0x53, 0x33, 
-        
-        // reserved / flags (4 bytes)
-        0x00, 0x00, 0x00, 0x00, 
-        
-        // publisher ID = 2 (2 bytes - Little Endian or Network Byte Order 02 00? Assuming Little Endian from input: 02 00)
-        0x05, 0x00, 
-        
-        // position = 0 (2 bytes)
-        0x00, 0x00,
-        
-        // number of variables = 1 (2 bytes)
-        // TODO add the number of variables as a variable
-        0x31, 0x00, 
-        
-        // length = 82 bytes (header 20 + data [data size]) (2 bytes - Little Endian or Network Byte Order 18 00? Assuming Little Endian from input: 18 00)
-        // TODO add the number of bytes as a variable
-        0x61, 0x00
-        
-        // Note: The total bytes added is 4 + 4 + 2 + 2 + 2 + 2 = 16 bytes. 
-        // Let's check the input again:
-        // "00 2d 53 33 " - 4 bytes
-        // "00 00 00 00 " - 4 bytes
-        // "02 00 " - 2 bytes
-        // "00 00 " - 2 bytes
-        // "01 00 " - 2 bytes
-        // "18 00" - 2 bytes
-        // TOTAL = 16 bytes.
-        
-        // **Correction based on common protocol headers:** // Your input string seems to be missing 4 bytes to reach the common 20-byte header length. 
-        // Based on the provided hex stream, the total is 16 bytes. 
-        // I will use the 16 bytes provided.
-        // If the header *should* be 20 bytes, you'd need to add two more 2-byte fields (4 bytes total).
-    };
-    std::memcpy(controlData, header_bytes.data(), header_bytes.size());
+    // The byte sequence for the header + counter (20 bytes total)
+    std::memcpy(controlData, udpSendHeader.data(), udpSendHeader.size());
 
     // Add counter (still part of the header)
     uint32_t val = msgWriteCounter;
@@ -337,24 +361,26 @@ void PlcVariableManager::init()
 {
     LoggerStream::getInstance() << INFO << "## PLC Rapport for the monitorData ##";
     printRapport(LoggerStream::getInstance(), plcMonitorVariables);
-    LoggerStream::getInstance() << INFO;
+
     LoggerStream::getInstance() << INFO << "## PLC Rapport for the controlData ##";
     printRapport(LoggerStream::getInstance(), plcControlVariables);
-    LoggerStream::getInstance() << INFO;
+
     LoggerStream::getInstance() << INFO << "## PC Rapport ##";
     printRapport(LoggerStream::getInstance(), pcVariables);
-    LoggerStream::getInstance() << INFO;
 
     // buffers
     setSize(PlcType::MONITOR);
     setSize(PlcType::CONTROL);
-    LoggerStream::getInstance() << INFO << "-- monitorData has size: " << monitorSize << " bytes.";
-    LoggerStream::getInstance() << INFO << "-- controlData has size: " << controlSize << " bytes.";
     controlData = new unsigned char[controlSize];
     monitorData = new unsigned char[monitorSize];
+    // Create header for udp send data
+    formatUdpHeader();
+    LoggerStream::getInstance() << INFO << "## UDP header ##";
+    printUdpHeader(LoggerStream::getInstance(), udpSendHeader);
 
-    // load data arrays
-
+    LoggerStream::getInstance() << INFO << "-- PLC monitorData is " << monitorSize << " bytes and has " << plcMonitorVariables.size() << " variables.";
+    LoggerStream::getInstance() << INFO << "-- PLC controlData is " << controlSize << " bytes and has " << plcControlVariables.size() << " variables.";
+    LoggerStream::getInstance() << INFO << "-- PC data has " << pcVariables.size() << " variables.";
 
     // connect to plc
     if (jConfig["protocols"]["plc"]["protocol"] == "s7") {
@@ -362,6 +388,7 @@ void PlcVariableManager::init()
     } else if (jConfig["protocols"]["plc"]["protocol"] == "udp") {
         plcPtr = make_unique<UdpPlc>(jConfig["protocols"]["plc"]);
     } else {
+        LoggerStream::getInstance() << ERROR << "PLC communication type " << jConfig["protocols"]["plc"]["protocol"] << " is not supported. Supported types are 's7' and 'udp'.";
         throw PlcProtocolNotSupportedException(jConfig["protocols"]["plc"]["protocol"]);
     }
 }
