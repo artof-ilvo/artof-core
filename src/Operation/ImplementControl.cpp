@@ -34,6 +34,7 @@ void ImplementControl::init(Utils::Redis::VariableManager* manager, shared_ptr<T
     this->manager = manager;
     this->traject = traject;
     this->position = position;
+    this->navModeMemory = manager->getVariable("pc.navigation.mode")->getValue<int>();
 }
 
 void ImplementControl::update(bool autoMode) 
@@ -72,6 +73,8 @@ void ImplementControl::reset()
                 traject->closestPoint(task.getDiscreteReference()), 
                 traject->getInterpolation());
             currentDiscrImplState = DRIVING;
+            task.getHitch().setActivateRoutine(manager, 0);
+            manager->getVariable("pc.navigation.mode")->setValue(navModeMemory);
         }
 
         task.getImplement().resetSections(); 
@@ -147,14 +150,17 @@ void ImplementControl::updateDiscrete(Task& task)
     switch (currentDiscrImplState)
     {
     case DRIVING:
+    {
         if (inRange(0.0, 1.5, pathDistanceToNextPoint)) {
             LoggerStream::getInstance() << DEBUG <<"pathDistanceToNextPoint: " << pathDistanceToNextPoint << " - DRIVING -> SLOW_DOWN";
             manager->getVariable("pc.implement.slow_down")->setValue(true);
             currentDiscrImplState = SLOW_DOWN;
         }
         break;
+    }
     case SLOW_DOWN:
-        if (inRange(-1.5, 0.0, pathDistanceToNextPoint)) {
+    {
+            if (inRange(-1.5, 0.0, pathDistanceToNextPoint)) {
             uint8_t routine = task.getTaskMapRoutine();
             LoggerStream::getInstance() << DEBUG <<"pathDistanceToNextPoint: " << pathDistanceToNextPoint << " - SLOW_DOWN -> ROUTINE_0";
             LoggerStream::getInstance() << DEBUG <<"Discrete routine initiated: " << (int) routine;
@@ -178,7 +184,9 @@ void ImplementControl::updateDiscrete(Task& task)
             currentDiscrImplState = DRIVING;
         }
         break;
+    }
     case ROUTINE_0:
+    {
         // Default routine
         // generate block pulse of 500ms
         if (!measuringDiscreteStarted) {            
@@ -201,7 +209,9 @@ void ImplementControl::updateDiscrete(Task& task)
         }
         
         break;
+    }
     case ROUTINE:
+    {    
         bool discreteImplementActive = manager->getVariable("plc.monitor." + task.getHitch().getEntityName() + ".busy")->getValue<bool>();
         busyDiscrImplEdge.detect(discreteImplementActive);
         // Routine of external controller
@@ -216,6 +226,7 @@ void ImplementControl::updateDiscrete(Task& task)
         }
 
         break;
+    }
     default:
         break;
     }
