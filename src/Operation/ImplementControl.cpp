@@ -155,20 +155,23 @@ void ImplementControl::updateDiscrete(Task& task)
         break;
     case SLOW_DOWN:
         if (inRange(-1.5, 0.0, pathDistanceToNextPoint)) {
-            LoggerStream::getInstance() << DEBUG <<"pathDistanceToNextPoint: " << pathDistanceToNextPoint << " - SLOW_DOWN -> ROUTINE_0";
-            measuringDiscreteStarted = false;
-            task.getHitch().setActivate(manager, true);
-            currentDiscrImplState = ROUTINE_0;
             uint8_t routine = task.getTaskMapRoutine();
+            LoggerStream::getInstance() << DEBUG <<"pathDistanceToNextPoint: " << pathDistanceToNextPoint << " - SLOW_DOWN -> ROUTINE_0";
             LoggerStream::getInstance() << DEBUG <<"Discrete routine initiated: " << (int) routine;
+
             // ROUTINE 0 is the default routine, if the routine is > 0, we need to set the routine variable in the PLC and set the navigation mode to external
-            if (routine > 0) {
+            if (routine == 0) {
+                measuringDiscreteStarted = false;
+                currentDiscrImplState = ROUTINE_0;
+                task.getHitch().setActivate(manager, true);
+            } else {
                 currentDiscrImplState = ROUTINE;
                 task.getHitch().setActivateRoutine(manager, true);
                 navModeMemory = manager->getVariable("pc.navigation.mode")->getValue<int>();
                 manager->getVariable("pc.navigation.mode")->setValue(5); // set navigation mode to external
                 LoggerStream::getInstance() << DEBUG <<"Discrete routine initiated: " << (int) routine << " - ROUTINE_0 -> ROUTINE";
             }
+
             // Set the next discrete point
             task.incrDiscrPoint(); // increment the discrete point
         } else if (abs(pathDistanceToNextPoint) > 1.5) {
@@ -176,6 +179,7 @@ void ImplementControl::updateDiscrete(Task& task)
         }
         break;
     case ROUTINE_0:
+        // Default routine
         // generate block pulse of 500ms
         if (!measuringDiscreteStarted) {            
             if ( pulseGenerator.generatePulse(500ms) ) {
@@ -191,7 +195,6 @@ void ImplementControl::updateDiscrete(Task& task)
             if (busyDiscrImplEdge.falling) {
                 LoggerStream::getInstance() << DEBUG <<"ROUTINE_0 -> DRIVING";
                 manager->getVariable("pc.implement.slow_down")->setValue(false);
-                manager->getVariable("pc.navigation.mode")->setValue(navModeMemory); // set navigation mode to normal
                 task.getHitch().setActivate(manager, false);
                 currentDiscrImplState = DRIVING;
             }
@@ -199,12 +202,17 @@ void ImplementControl::updateDiscrete(Task& task)
         
         break;
     case ROUTINE:
-        if (task.getHitch().updateActivateRoutine(manager) == 0) {
+        bool discreteImplementActive = manager->getVariable("plc.monitor." + task.getHitch().getEntityName() + ".busy")->getValue<bool>();
+        busyDiscrImplEdge.detect(discreteImplementActive);
+        // Routine of external controller
+        // Check if routine is set to zero by pc routine
+        // Check if busy is set to false by plc routine
+        if (task.getHitch().updateActivateRoutine(manager) == 0 || busyDiscrImplEdge.falling) {
             LoggerStream::getInstance() << DEBUG <<"ROUTINE -> DRIVING";
             manager->getVariable("pc.implement.slow_down")->setValue(false);
-            task.getHitch().setActivate(manager, false);
             task.getHitch().setActivateRoutine(manager, 0);
-            manager->getVariable("pc.navigation.mode")->setValue(0); // set navigation mode to normal
+            manager->getVariable("pc.navigation.mode")->setValue(navModeMemory); // set navigation mode to normal
+            currentDiscrImplState = DRIVING;
         }
 
         break;
