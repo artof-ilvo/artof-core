@@ -54,18 +54,18 @@ namespace Settings {
 
         std::string taskmappath;
         GeometryType geometryType;
-        std::variant<Geometry::PolygonVector,Geometry::PointVector> polygons, points;
+        std::variant<Geometry::TaskPolygonVector,Geometry::TaskPointVector> polygons, points;
+
+        int nextDiscreteImplementIndex;
+        std::vector<Geometry::IndexPointPtr> discretePathPoints;
 
         void initVariant(Utils::File::PointData& f);
-        std::vector<Geometry::IndexPointPtr> discr_path_points;
         static bool compareClosePoints(Geometry::IndexPointPtr p1, Geometry::IndexPointPtr p2);
         static bool equalClosePoints(Geometry::IndexPointPtr p1, Geometry::IndexPointPtr p2);
 
     public:
         Task(std::string baseFilePath, nlohmann::json task, int gpsZoneId);
         ~Task() = default;
-
-        int nextDiscreteImplementIndex;
 
         void updateState(Redis::VariableManager* manager);
         bool updateSections(Redis::VariableManager* manager, bool disable=false);
@@ -75,6 +75,8 @@ namespace Settings {
         bool hitchInTaskMap();
         bool insideTaskMap(Geometry::Point point, bool disable=false);
         bool insideTaskMap(std::shared_ptr<Section> section, bool disable=false);
+        int getTaskMapRate(std::shared_ptr<Section> section, bool disable=false);
+        int getTaskMapRoutine();
 
         Hitch& getHitch();
         bool onHitch(std::string name);
@@ -95,6 +97,15 @@ namespace Settings {
             if (geometryType == GeometryType::POLYGONS) return std::get<T>(polygons);
             else return std::get<T>(points);
         }
+
+        // returns the distance to the next discrete measurement point 
+        double distanceToNextDiscrPoint(const Geometry::IndexPoint& closestTrajectPoint, double interpolationDistance);
+        // get discrete reference
+        Eigen::Affine3d getDiscreteReference();
+        // increments the discrete measurement point, for the next point to drive to 
+        void incrDiscrPoint();
+        // resets the discrete measurement point, the closest discrete measurement point will be executed next 
+        void onDiscrReset(const Geometry::IndexPoint& closestTrajectPoint, const std::vector<Geometry::PointPtr>& interpolation);
 
         void printRapport(Utils::Logging::LoggerStream& logger);
         nlohmann::json toJson() const;

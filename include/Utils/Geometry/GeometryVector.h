@@ -42,13 +42,30 @@ namespace Geometry {
             {
                 sort(this->begin(), this->end(), compareGeometry<T>);
                 m = Eigen::MatrixXd::Zero(v.size(), 2);
-                for (int i = 0; i < v.size(); i++) {
+                for (int i = 0; i < (int)v.size(); i++) {
                     T geometry = v[i];
                     Point center = geometry->center();
                     m(i,0) = center.x();
                     m(i,1) = center.y();
                 }
             } 
+
+            // converting constructor: allow GeometryVector<U> (e.g. TaskPointPtr) to be
+            // converted to GeometryVector<T> (e.g. PointPtr) when element types are
+            // convertible (shared_ptr<Derived> -> shared_ptr<Base>).
+            template<class U>
+            GeometryVector(const GeometryVector<U>& other) : std::vector<T>(other.begin(), other.end())
+            {
+                // initialize sorted order and the matrix similar to the vector ctor
+                sort(this->begin(), this->end(), compareGeometry<T>);
+                m = Eigen::MatrixXd::Zero((int)this->size(), 2);
+                for (int i = 0; i < (int)this->size(); i++) {
+                    T geometry = this->at(i);
+                    Point center = geometry->center();
+                    m(i,0) = center.x();
+                    m(i,1) = center.y();
+                }
+            }
 
             std::vector<T> nearby(Point& p, int windowSize=10)
             {
@@ -101,6 +118,8 @@ namespace Geometry {
 
     typedef GeometryVector<PolygonPtr> PolygonVector;
     typedef GeometryVector<PointPtr> PointVector;
+    typedef GeometryVector<TaskPolygonPtr> TaskPolygonVector;
+    typedef GeometryVector<TaskPointPtr> TaskPointVector;
 
 } // namespace Ilvo
 } // namespace Utils

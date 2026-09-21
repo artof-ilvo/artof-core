@@ -162,6 +162,23 @@ namespace Geometry {
 
     typedef std::shared_ptr<IndexPoint> IndexPointPtr;
 
+
+    class TaskPoint : public Point
+    {
+    public:
+        TaskPoint();
+        TaskPoint(const TaskPoint& from);
+        TaskPoint(const Point& point, int routine);
+        TaskPoint(double x, double y, int routine);
+        ~TaskPoint() = default;
+
+        TaskPoint& operator= (const TaskPoint& from);
+
+        int routine;
+    };
+
+    typedef std::shared_ptr<TaskPoint> TaskPointPtr;
+
 } // namespace Ilvo
 } // namespace Utils
 } // namespace Geometry

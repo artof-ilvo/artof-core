@@ -55,6 +55,7 @@ namespace File {
         ~PointData() = default;
 
         const std::vector<std::vector<Geometry::PointPtr>>& getAllPoints();
+        std::vector<Geometry::PointPtr> getAllPointsFlat();
         int getNumSeries();
         bool hasMultiple();
 
@@ -63,6 +64,69 @@ namespace File {
         int getNumPoints(uint i);
         int getNumFields(uint i);
         bool isPolygon(uint i);
+
+        template<class T>
+        std::vector<T> getAllFieldsByName(std::string name) {
+            std::vector<T> fieldValues;
+            for (uint series = 0; series < this->getNumSeries(); series++) {
+                for (ShapeFieldDataPtr field: this->metadata[series]) {
+                    if (field->name.compare(name) == 0) {
+                        if constexpr (std::is_same<T, int>::value) {
+                            if (field->type == ShapeFieldType::INT) fieldValues.push_back(field->i);
+                            if (field->type == ShapeFieldType::DOUBLE) fieldValues.push_back(static_cast<int>(field->d));
+                            if (field->type == ShapeFieldType::BOOL) fieldValues.push_back(static_cast<int>(field->b));
+                        } else if constexpr (std::is_same<T, bool>::value) {
+                            if (field->type == ShapeFieldType::BOOL) fieldValues.push_back(field->b);
+                            if (field->type == ShapeFieldType::INT) fieldValues.push_back(static_cast<bool>(field->i));
+                            if (field->type == ShapeFieldType::DOUBLE) fieldValues.push_back(static_cast<bool>(field->d));
+                        } else if constexpr (std::is_same<T, double>::value) {
+                            if (field->type == ShapeFieldType::DOUBLE) fieldValues.push_back(field->d);
+                            if (field->type == ShapeFieldType::INT) fieldValues.push_back(static_cast<double>(field->i));
+                            if (field->type == ShapeFieldType::BOOL) fieldValues.push_back(static_cast<double>(field->b));
+                        } else if constexpr (std::is_same<T, std::string>::value) {
+                            if (field->type == ShapeFieldType::STRING) fieldValues.push_back(field->s);
+                        }
+                    }
+                }
+            }
+            
+            return fieldValues;
+        }
+
+        template<class T>
+        T getFieldByName(uint series, std::string name) {
+            std::vector<std::string> fieldNames;
+            for (ShapeFieldDataPtr field: this->metadata[series]) {
+                fieldNames.push_back(field->name);
+                if (field->name.compare(name) == 0) {
+                    if constexpr (std::is_same<T, int>::value) {
+                        if (field->type == ShapeFieldType::INT) return field->i;
+                        if (field->type == ShapeFieldType::DOUBLE) return static_cast<int>(field->d);
+                        if (field->type == ShapeFieldType::BOOL) return static_cast<int>(field->b);
+                    } else if constexpr (std::is_same<T, bool>::value) {
+                        if (field->type == ShapeFieldType::BOOL) return field->b;
+                        if (field->type == ShapeFieldType::INT) return static_cast<bool>(field->i);
+                        if (field->type == ShapeFieldType::DOUBLE) return static_cast<bool>(field->d);
+                    } else if constexpr (std::is_same<T, double>::value) {
+                        if (field->type == ShapeFieldType::DOUBLE) return field->d;
+                        if (field->type == ShapeFieldType::INT) return static_cast<double>(field->i);
+                        if (field->type == ShapeFieldType::BOOL) return static_cast<double>(field->b);
+                    } else if constexpr (std::is_same<T, std::string>::value) {
+                        if (field->type == ShapeFieldType::STRING) return field->s;
+                    }
+                    throw std::runtime_error("Requested type does not match field type for field: " + name);
+                }
+            }
+            std::stringstream ssFieldNames;
+            for (const auto& fieldName : fieldNames) {
+                ssFieldNames << fieldName;
+                if (&fieldName != &fieldNames.back()) {
+                    ssFieldNames << ", ";
+                }
+            }
+            std::string availableFields = ssFieldNames.str();
+            throw std::runtime_error("Field with name " + name + " not found. Available fields: " + availableFields);
+        }
     };
 
     inline std::ostream & operator<<(std::ostream & str, PointData& data) { 

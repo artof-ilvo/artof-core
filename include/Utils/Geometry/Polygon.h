@@ -22,6 +22,7 @@
 #include <boost/geometry.hpp>
 #include <boost/geometry/geometries/point_xy.hpp>
 #include <boost/geometry/geometries/polygon.hpp>
+#include <boost/geometry/geometries/multi_polygon.hpp>
 
 
 namespace Ilvo {
@@ -30,11 +31,14 @@ namespace Geometry {
 
     // polygon clockwise and closed
     typedef boost::geometry::model::polygon<bgPoint2D, true, true> bgPolygon2D;
+    typedef boost::geometry::model::multi_polygon<bgPolygon2D> bgMultiPolygon2D;
+
 
     class Polygon : public Geometry
     {  
     private:
         bgPolygon2D p;
+        int rate = 0;
     public:
         Polygon() = default;
         Polygon(std::vector<PointPtr> points);
@@ -48,6 +52,7 @@ namespace Geometry {
         void update(Settings::TransformMatrix matrix, double width, double up, double down);
 
         const bgPolygon2D& geometry() const;
+        std::string wktGeometry() const;
         nlohmann::json toJson() const;
 
         void contour(std::vector<std::vector<double>>& robotLatLng, std::vector<std::vector<double>>& robotXY, int zone=-1) const;
@@ -66,6 +71,21 @@ namespace Geometry {
 
     typedef std::shared_ptr<Polygon> PolygonPtr;
     
+    class TaskPolygon : public Polygon
+    {
+    private:
+        int rate = 0;
+    public:
+        TaskPolygon() = default;
+        TaskPolygon(std::vector<PointPtr> points, int rate);
+        TaskPolygon(std::vector<Point> points, int rate);
+        ~TaskPolygon() = default;
+
+        int getRate() const;
+    };
+
+    typedef std::shared_ptr<TaskPolygon> TaskPolygonPtr;
+
 } // namespace Ilvo
 } // namespace Utils
 } // namespace Geometry

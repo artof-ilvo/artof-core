@@ -100,6 +100,13 @@ void Hitch::setActivateDiscrete(VariableManager* manager,bool activate) {
     manager->getVariable(variableName)->setValue(activate);
 }
 
+void Hitch::setActivateRoutine(VariableManager* manager, int routine) {
+    active_routine = routine;
+    string variableName = "plc.control." + getEntityName() + ".activate_routine";
+    manager->getVariable(variableName)->setValue(routine);
+}
+
+
 void Hitch::setActivateCardan(VariableManager* manager,bool activate) { 
     this->activate_cardan = activate; 
     string variableName = "plc.control." + getEntityName() + ".activate_cardan";
@@ -128,6 +135,12 @@ bool Hitch::updateActivateDiscrete(VariableManager* manager) {
     string variableName = "plc.control." + getEntityName() + ".activate_discrete";
     activate_discrete = manager->existsVariable(variableName) ? manager->getVariable(variableName)->getValue<bool>() : false;
     return getActivateDiscrete();
+}
+
+int Hitch::updateActivateRoutine(VariableManager* manager) { 
+    string variableName = "plc.control." + getEntityName() + ".activate_routine";
+    active_routine = manager->existsVariable(variableName) ? manager->getVariable(variableName)->getValue<int>() : 0;
+    return active_routine;
 }
 
 bool Hitch::updateBusy(VariableManager* manager) { 
@@ -160,6 +173,10 @@ bool Hitch::getActive() {
 
 bool Hitch::getActivateDiscrete() { 
     return activate_discrete; 
+}
+
+int Hitch::getActivateRoutine() { 
+    return active_routine; 
 }
 
 bool Hitch::getActivateCardan() { 

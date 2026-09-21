@@ -122,3 +122,28 @@ void Polygon::contour(vector<vector<double>>& robotLatLng, vector<vector<double>
         }
     }
 }
+
+std::string Polygon::wktGeometry() const
+{
+    std::ostringstream oss;
+    // boost::geometry::wkt() streams the geometry in WKT format
+    oss << std::setprecision(15) << boost::geometry::wkt(p);
+    std::string wkt = oss.str();
+    return wkt;
+}
+
+
+TaskPolygon::TaskPolygon(std::vector<PointPtr> points, int rate): Polygon(points)
+{
+    this->rate = rate;
+}
+
+TaskPolygon::TaskPolygon(std::vector<Point> points, int rate): Polygon(points)
+{
+    this->rate = rate;
+}
+
+int TaskPolygon::getRate() const
+{
+    return rate;
+}

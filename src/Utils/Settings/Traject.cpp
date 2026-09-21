@@ -295,9 +295,10 @@ IndexPoint Traject::closestPoint(Point currentPoint, int startIdx, int endIdx, d
 {
     double mindist = 1e6;
     int minIndex = startIdx;
+    int interpolationLength = this->interpolationLength();
 
     for (int i = startIdx; i < endIdx; i++) {
-        if (i < interpolationLength()) {
+        if (i < interpolationLength) {
             Point p_path = *interpolation->at(i);
 
             double dist = p_path.distance(currentPoint);
@@ -311,8 +312,8 @@ IndexPoint Traject::closestPoint(Point currentPoint, int startIdx, int endIdx, d
     }
 
     // Assert when the minIndex is larger than the interpolationLength
-    if (minIndex >= interpolationLength()) {
-        throw TrajectIndexException(minIndex, interpolationLength());
+    if (minIndex >= interpolationLength) {
+        throw TrajectIndexException(minIndex, interpolationLength);
     }
 
     return IndexPoint(*interpolation->at(minIndex), minIndex);
@@ -417,67 +418,6 @@ bool Traject::insideAnyTask(Point point)
         }
     }
     return false;
-}
-
-double Traject::distanceToNextDiscrPoint(Task& task, double interpolationDistance) 
-{
-    int s = task.getPathPointsDiscr().size();
-    if (s > 0) { // only if discrete task
-        IndexPoint closestPointToCurrentPosition;
-        if (task.getImplement().getSections().size() > 0) {
-            closestPointToCurrentPosition = closestPoint(task.getImplement().getSections().at(0)->getState().asAffine());
-        } else {
-            closestPointToCurrentPosition = closestPoint(task.getHitch().getState().asAffine());
-        }
-        // if the last index is already passed do not increment points
-        if (task.nextDiscreteImplementIndex < s) {
-            int numberOfPoints = task.getPathPointsDiscr().at(task.nextDiscreteImplementIndex)->index - closestPointToCurrentPosition.index;
-            return interpolationDistance * numberOfPoints;
-        }
-    } 
-    // return large value to illustrate there is no approaching point
-    return 1e6;
-}
-
-void Traject::incrDiscrPoint(Task& task)
-{
-    int s = task.getPathPointsDiscr().size();
-    if (s > 0) { // only if discrete task
-        task.nextDiscreteImplementIndex++;
-        if (task.nextDiscreteImplementIndex < (s-1) ) {
-            LoggerStream::getInstance() << DEBUG << "new idx is: " << task.nextDiscreteImplementIndex << " and in path: " << task.getPathPointsDiscr()[task.nextDiscreteImplementIndex]->index;
-        } else {
-            LoggerStream::getInstance() << DEBUG << "last point is finished!";
-        }
-    }
-}
-
-
-void Traject::onDiscrReset(Point point)
-{
-    for (Task& task: field->getTasks()) {
-        if (task.getGeometry<PointVector>().size() > 0) { // only if discrete task
-            IndexPoint closestPointToCurrentPosition = closestPoint(point);
-            task.createPathPointsDiscr(*this->interpolation);
-            task.printRapport(LoggerStream::getInstance());
-            task.nextDiscreteImplementIndex = 0;
-            int s = task.getPathPointsDiscr().size();
-            int i = 0;
-            while (i < s) {
-                if (closestPointToCurrentPosition.index < task.getPathPointsDiscr().at(i)->index) {
-                    break;
-                }
-                i++;
-            }
-            if (i < s) {
-                task.nextDiscreteImplementIndex = i;
-            } else {
-                task.nextDiscreteImplementIndex = s-1;
-            }
-            
-            LoggerStream::getInstance() << DEBUG << "RESET -- closestPointToCurrentPosition.index: " << closestPointToCurrentPosition.index << ", task.nextDiscreteImplementIndex: " << task.nextDiscreteImplementIndex;
-        }
-    }
 }
 
 json Traject::toJson() const

@@ -83,16 +83,105 @@ void Task::initVariant(PointData& f)
 {
      if (type.compare("discrete") == 0 || type.compare("intermittent") == 0) { // discrete --> save as points
         geometryType = GeometryType::POINTS;
-        PointVector geometries(f.getPoints(0));
+        vector<TaskPointPtr> vec;
+
+        vector<Geometry::PointPtr> flatPoints = f.getAllPointsFlat();
+        vector<int> routineValues;
+        try {
+            routineValues = f.getAllFieldsByName<int>("routine");
+        } catch (std::runtime_error& e) {
+            LoggerStream::getInstance() << WARN << "No routine field of type int found in task " << name << ", defaulting to 0";
+            LoggerStream::getInstance() << WARN << "Error: " << e.what();
+        }
+
+        if (routineValues.size() < flatPoints.size()) {
+            routineValues.resize(flatPoints.size(), 0);
+        }
+
+        LoggerStream::getInstance() << DEBUG << "Task " << name << " has " << flatPoints.size() << " points and " << routineValues.size() << " routine values";
+
+        
+        for (int i = 0; i < flatPoints.size(); i++) {            
+            vec.push_back(make_shared<TaskPoint>(*flatPoints[i], routineValues[i]));
+        }
+        
+        TaskPointVector geometries(vec);
         this->points = geometries;
     } else { // continous or hitch task --> save as polygons
         geometryType = GeometryType::POLYGONS;
-        vector<PolygonPtr> vec;
+        vector<TaskPolygonPtr> vec;
         for (int i = 0; i < f.getNumSeries(); i++) {
-            vec.push_back(make_shared<Polygon>(f.getPoints(i)));
+            try { 
+                vec.push_back(make_shared<TaskPolygon>(f.getPoints(i), f.getFieldByName<int>(i, "rate")));
+            } catch (std::runtime_error& e) {
+                vec.push_back(make_shared<TaskPolygon>(f.getPoints(i), 0));
+                LoggerStream::getInstance() << WARN << "No rate field of type int found for polygon " << i << " in task " << name << ", defaulting to 1";
+                LoggerStream::getInstance() << WARN << "Error: " << e.what();
+            }
         }
-        PolygonVector geometries(vec);
+        TaskPolygonVector geometries(vec);
         this->polygons = geometries;
+    }
+}
+
+Eigen::Affine3d Task::getDiscreteReference()
+{
+    if (getImplement().getSections().size() > 0) {
+        return getImplement().getSections().at(0)->getState().asAffine();
+    } else {
+        return getHitch().getState().asAffine();
+    }
+}
+
+double Task::distanceToNextDiscrPoint(const IndexPoint& closestTrajectPoint, double interpolationDistance) 
+{
+    int s = getPathPointsDiscr().size();
+    if (s > 0) { // only if discrete task
+        // if the last index is already passed do not increment points
+        if (nextDiscreteImplementIndex < s) {
+            int numberOfPoints = getPathPointsDiscr().at(nextDiscreteImplementIndex)->index - closestTrajectPoint.index;
+            return interpolationDistance * numberOfPoints;
+        }
+    } 
+    // return large value to illustrate there is no approaching point
+    return 1e6;
+}
+
+void Task::incrDiscrPoint()
+{
+    int s = getPathPointsDiscr().size();
+    if (s > 0) { // only if discrete task
+        nextDiscreteImplementIndex++;
+        if (nextDiscreteImplementIndex < (s-1) ) {
+            LoggerStream::getInstance() << DEBUG << "new idx is: " << nextDiscreteImplementIndex << " and in path: " << getPathPointsDiscr()[nextDiscreteImplementIndex]->index;
+        } else {
+            LoggerStream::getInstance() << DEBUG << "last point is finished!";
+        }
+    }
+}
+
+
+void Task::onDiscrReset(const IndexPoint& closestTrajectPoint, const vector<PointPtr>& interpolation)
+{
+    if (getGeometry<TaskPointVector>().size() > 0) { // only if discrete task
+        createPathPointsDiscr(interpolation);
+        printRapport(LoggerStream::getInstance());
+        nextDiscreteImplementIndex = 0;
+        int s = getPathPointsDiscr().size();
+        int i = 0;
+        while (i < s) {
+            if (closestTrajectPoint.index < getPathPointsDiscr().at(i)->index) {
+                break;
+            }
+            i++;
+        }
+        if (i < s) {
+            nextDiscreteImplementIndex = i;
+        } else {
+            nextDiscreteImplementIndex = s-1;
+        }
+        
+        LoggerStream::getInstance() << DEBUG << "RESET -- closestTrajectPoint.index: " << closestTrajectPoint.index << ", nextDiscreteImplementIndex: " << nextDiscreteImplementIndex;
     }
 }
 
@@ -108,7 +197,7 @@ bool Task::equalClosePoints(IndexPointPtr p1, IndexPointPtr p2)
 
 void Task::createPathPointsDiscr(vector<PointPtr> trajectPoints)
 {
-    for (PointPtr p_task: get<PointVector>(points)) {
+    for (TaskPointPtr p_task: get<TaskPointVector>(points)) {
         IndexPoint p;
         double d = trajectPoints[0]->distance(*p_task);
         for (int i = 1; i < trajectPoints.size(); i++) {
@@ -119,10 +208,10 @@ void Task::createPathPointsDiscr(vector<PointPtr> trajectPoints)
                 d = d_to_traj;
             }
         }
-        discr_path_points.push_back(make_shared<IndexPoint>(p));
+        discretePathPoints.push_back(make_shared<IndexPoint>(p));
     }
-    sort(discr_path_points.begin(), discr_path_points.end(), this->compareClosePoints);
-    discr_path_points.erase(unique(discr_path_points.begin(), discr_path_points.end(), this->equalClosePoints), discr_path_points.end());
+    sort(discretePathPoints.begin(), discretePathPoints.end(), this->compareClosePoints);
+    discretePathPoints.erase(unique(discretePathPoints.begin(), discretePathPoints.end(), this->equalClosePoints), discretePathPoints.end());
 }
 
 void Task::printRapport(LoggerStream& logger) 
@@ -132,7 +221,7 @@ void Task::printRapport(LoggerStream& logger)
     if (geometryType == POLYGONS) {
         s << "## Polygon Array ##" << endl;
     
-        PolygonVector& polyVec = get<PolygonVector>(polygons);
+        TaskPolygonVector& polyVec = get<TaskPolygonVector>(polygons);
         for (int i = 0; i < polyVec.size(); i++) {
             s << i << ") " << endl;
 
@@ -149,17 +238,17 @@ void Task::printRapport(LoggerStream& logger)
     }
 
     if (geometryType == POINTS) {
-        PointVector pointVec = get<PointVector>(points);
+        TaskPointVector pointVec = get<TaskPointVector>(points);
         s << "## Point array ##" << endl;
         s << setprecision(15);
         TablePrinter tp(&s);
-        if (discr_path_points.size() > 0) {
+        if (discretePathPoints.size() > 0) {
             tp.AddColumn("idx", 10);
             tp.AddColumn("X_path [m]", 15);
             tp.AddColumn("Y_path [m]", 15);
             tp.PrintHeader();
-            for (int i = 0; i < discr_path_points.size(); i++) {
-                tp << discr_path_points.at(i)->index << discr_path_points.at(i)->x() << discr_path_points.at(i)->y();
+            for (int i = 0; i < discretePathPoints.size(); i++) {
+                tp << discretePathPoints.at(i)->index << discretePathPoints.at(i)->x() << discretePathPoints.at(i)->y();
             }
         } else {
             tp.AddColumn("X [m]", 15);
@@ -229,7 +318,7 @@ bool Task::onHitch(string name)
 
 const vector<IndexPointPtr>& Task::getPathPointsDiscr()
 {
-    return discr_path_points;
+    return discretePathPoints;
 }
 
 bool Task::updateSections(VariableManager* manager, bool disable)
@@ -240,13 +329,13 @@ bool Task::updateSections(VariableManager* manager, bool disable)
         auto section = implement.getSections().at(i);
         string name = "plc.control." + hitch.getEntityName() + ".activate_sections." + to_string(i);
         if (getImplement().worksOnTaskmap()) {
-            section->setActive(insideTaskMap(section, disable));
-            manager->getVariable(name)->setValue<int>((int) section->getActive());
+            section->setRate(getTaskMapRate(section, disable));
+            manager->getVariable(name)->setValue<int>((int) section->getRate());
         } else {
             bool active = manager->getVariable(name)->getValue<bool>();
-            section->setActive(active);
+            section->setRate(active ? 1 : 0);
         }
-        if (section->getActive()) {
+        if (section->getRate()) {
             activeSections = true;
         }
     }
@@ -273,38 +362,43 @@ void Task::activateSection(string id, bool value)
 {
     for (auto section: implement.getSections()) {
         if (section->id.compare(id) == 0) {
-            section->setActive(value);
+            section->setRate(value ? 1 : 0);
         }
     }
 }
 
 bool Task::insideTaskMap(shared_ptr<Section> section, bool disable)
 {
+    return insideTaskMap(section, disable) != 0;
+}
+
+int Task::getTaskMapRate(shared_ptr<Section> section, bool disable)
+{
     const Polygon& polygonSection = section->getPolygon();
     Point currentPosition(section->getState().getT().asVector());
     section->clearActivationGeometry();
 
     if (type.compare("continuous") == 0) { 
-        for (PolygonPtr polygon: get<PolygonVector>(polygons)) { 
+        for (TaskPolygonPtr polygon: get<TaskPolygonVector>(polygons)) { 
             if (overlaps(polygonSection.geometry(), polygon->geometry()) || covered_by(polygonSection.geometry(), polygon->geometry())) {
                 section->setActivationGeometry(polygon);
-                return !disable;
+                return disable ? 0 : static_cast<uint8_t>(polygon->getRate());
             }
         }     
     } else if (type.compare("cardan") == 0) {
-        for (PolygonPtr polygon: get<PolygonVector>(polygons)) { 
+        for (TaskPolygonPtr polygon: get<TaskPolygonVector>(polygons)) { 
             if (overlaps(polygonSection.geometry(), polygon->geometry()) || covered_by(polygonSection.geometry(), polygon->geometry())) {
                 // section->setActivationGeometry(polygon);
-                return !disable;
+                return disable ? 0 : 1;
             }
         } 
     } else if (type.compare("intermittent") == 0) {
-        PointVector vec = get<PointVector>(points);
-        std::vector<PointPtr> points = vec.nearby(currentPosition, 40);
-        for (PointPtr point: points) {
+        TaskPointVector vec = get<TaskPointVector>(points);
+        std::vector<TaskPointPtr> points = vec.nearby(currentPosition, 40);
+        for (TaskPointPtr point: points) {
             if (covered_by(point->geometry(), polygonSection.geometry())) {
                 section->addActivationGeometry(point);
-                return !disable;
+                return disable ? 0 : 1;
             }
         }   
     }
@@ -312,11 +406,19 @@ bool Task::insideTaskMap(shared_ptr<Section> section, bool disable)
     return false;
 }
 
+
+int Task::getTaskMapRoutine()
+{
+    int routine = getGeometry<TaskPointVector>().at(nextDiscreteImplementIndex)->routine;
+    return routine;
+}
+
+
 bool Task::insideTaskMap(Point point, bool disable)
 {
-    PolygonVector& vec = get<PolygonVector>(polygons);
+    TaskPolygonVector& vec = get<TaskPolygonVector>(polygons);
     if (vec.size() > 0) {
-        for (PolygonPtr polygon: vec) { 
+        for (TaskPolygonPtr polygon: vec) { 
             if (covered_by(point.geometry(), polygon->geometry())) {
                 return !disable;
             }
@@ -344,14 +446,14 @@ json Task::toJson() const
     json j_points = json::array();
 
     if (geometryType == POLYGONS) {
-        PolygonVector polyVec = get<PolygonVector>(polygons);
-        for (PolygonPtr polygonPtr: polyVec) {
+        TaskPolygonVector polyVec = get<TaskPolygonVector>(polygons);
+        for (TaskPolygonPtr polygonPtr: polyVec) {
             j_points.push_back(polygonPtr->toJson());
         }
     } else {
-        PointVector pointVec = get<PointVector>(points);
+        TaskPointVector pointVec = get<TaskPointVector>(points);
         j_points.push_back(json::array());  // same look as polygon array
-        for (PointPtr pointPtr: pointVec) {
+        for (TaskPointPtr pointPtr: pointVec) {
             j_points[0].push_back(pointPtr->toJson());
         }
     }

@@ -68,7 +68,9 @@ void ImplementControl::reset()
         task.updateState(manager); 
 
         if (task.isType("discrete")) {
-            traject->onDiscrReset(task.getHitch().getState().asAffine());
+            task.onDiscrReset(
+                traject->closestPoint(task.getDiscreteReference()), 
+                traject->getInterpolation());
             currentDiscrImplState = DRIVING;
         }
 
@@ -139,8 +141,8 @@ void ImplementControl::updateDiscrete(Task& task)
 {
     // first execute onDiscrPoint to set implPoint properly
     double interpolationDistance = manager->getVariable("pc.purepursuit.inter_point_distance")->getValue<double>();
-    double pathDistanceToNextPoint = traject->distanceToNextDiscrPoint(task, interpolationDistance);
-    task.activateSection("P", currentDiscrImplState == MEASURING);
+    double pathDistanceToNextPoint = task.distanceToNextDiscrPoint(traject->closestPoint(task.getDiscreteReference()), interpolationDistance);
+    task.activateSection("P", currentDiscrImplState == ROUTINE_0);
 
     switch (currentDiscrImplState)
     {
@@ -153,16 +155,27 @@ void ImplementControl::updateDiscrete(Task& task)
         break;
     case SLOW_DOWN:
         if (inRange(-1.5, 0.0, pathDistanceToNextPoint)) {
-            LoggerStream::getInstance() << DEBUG <<"pathDistanceToNextPoint: " << pathDistanceToNextPoint << " - SLOW_DOWN -> MEASURING";
-            traject->incrDiscrPoint(task); // increment the discrete point
+            LoggerStream::getInstance() << DEBUG <<"pathDistanceToNextPoint: " << pathDistanceToNextPoint << " - SLOW_DOWN -> ROUTINE_0";
             measuringDiscreteStarted = false;
             task.getHitch().setActivate(manager, true);
-            currentDiscrImplState = MEASURING;
+            currentDiscrImplState = ROUTINE_0;
+            uint8_t routine = task.getTaskMapRoutine();
+            LoggerStream::getInstance() << DEBUG <<"Discrete routine initiated: " << (int) routine;
+            // ROUTINE 0 is the default routine, if the routine is > 0, we need to set the routine variable in the PLC and set the navigation mode to external
+            if (routine > 0) {
+                currentDiscrImplState = ROUTINE;
+                task.getHitch().setActivateRoutine(manager, true);
+                navModeMemory = manager->getVariable("pc.navigation.mode")->getValue<int>();
+                manager->getVariable("pc.navigation.mode")->setValue(5); // set navigation mode to external
+                LoggerStream::getInstance() << DEBUG <<"Discrete routine initiated: " << (int) routine << " - ROUTINE_0 -> ROUTINE";
+            }
+            // Set the next discrete point
+            task.incrDiscrPoint(); // increment the discrete point
         } else if (abs(pathDistanceToNextPoint) > 1.5) {
             currentDiscrImplState = DRIVING;
         }
         break;
-    case MEASURING:
+    case ROUTINE_0:
         // generate block pulse of 500ms
         if (!measuringDiscreteStarted) {            
             if ( pulseGenerator.generatePulse(500ms) ) {
@@ -176,13 +189,24 @@ void ImplementControl::updateDiscrete(Task& task)
 
             busyDiscrImplEdge.detect(discreteImplementActive);
             if (busyDiscrImplEdge.falling) {
-                LoggerStream::getInstance() << DEBUG <<"MEASURING -> DRIVING";
+                LoggerStream::getInstance() << DEBUG <<"ROUTINE_0 -> DRIVING";
                 manager->getVariable("pc.implement.slow_down")->setValue(false);
+                manager->getVariable("pc.navigation.mode")->setValue(navModeMemory); // set navigation mode to normal
                 task.getHitch().setActivate(manager, false);
                 currentDiscrImplState = DRIVING;
             }
         }
         
+        break;
+    case ROUTINE:
+        if (task.getHitch().updateActivateRoutine(manager) == 0) {
+            LoggerStream::getInstance() << DEBUG <<"ROUTINE -> DRIVING";
+            manager->getVariable("pc.implement.slow_down")->setValue(false);
+            task.getHitch().setActivate(manager, false);
+            task.getHitch().setActivateRoutine(manager, 0);
+            manager->getVariable("pc.navigation.mode")->setValue(0); // set navigation mode to normal
+        }
+
         break;
     default:
         break;

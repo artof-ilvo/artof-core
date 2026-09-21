@@ -107,12 +107,6 @@ namespace Settings {
         bool insideFirstTask(Geometry::Point point);
         /** @brief checks if the point is inside any task */
         bool insideAnyTask(Geometry::Point point);
-        /** @brief returns the distance to the next discrete measurement point */
-        double distanceToNextDiscrPoint(Task& task, double interpolationDistance);
-        /** @brief increments the discrete measurement point, for the next point to drive to */
-        void incrDiscrPoint(Task& task);
-        /** @brief resets the discrete measurement point, the closest discrete measurement point will be executed next */
-        void onDiscrReset(Geometry::Point point);
 
         nlohmann::json toJson() const;
     };

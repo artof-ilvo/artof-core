@@ -36,6 +36,7 @@ public:
     double up;
     double down;
     bool active;
+    uint8_t rate;
     double link_length;
     int repeats;
     double offset;
@@ -51,8 +52,8 @@ public:
     double getLinkLength();
     void setParallelAngle(double angle);
     double getParallelAngle();
-    void setActive(bool active);
-    bool getActive();
+    void setRate(uint8_t rate);
+    uint8_t getRate();
 
     void clearActivationGeometry();
     void addActivationGeometry(Geometry::PointPtr g);

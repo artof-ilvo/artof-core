@@ -156,3 +156,16 @@ IndexPoint& IndexPoint::operator= (const Point& from)
     return *this;
 }
 
+TaskPoint::TaskPoint() : Point(), routine(0) {}
+TaskPoint::TaskPoint(const TaskPoint& from) : Point(from.x(), from.y()), routine(from.routine) {}
+TaskPoint::TaskPoint(const Point& point, int routine) : Point(point), routine(routine) {}
+TaskPoint::TaskPoint(double x, double y, int routine) : Point(x, y), routine(routine) {}
+
+TaskPoint& TaskPoint::operator= (const TaskPoint& from)
+{
+    empty = false;
+    routine = from.routine;
+    p.x(from.x());
+    p.y(from.y());
+    return *this;
+}

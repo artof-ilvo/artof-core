@@ -25,7 +25,7 @@ namespace Ilvo {
 namespace Core {
     
     /** @brief States for discrete implement ImplementControl state machine */
-    enum DiscrImplState {DRIVING, SLOW_DOWN, MEASURING};
+    enum DiscrImplState {DRIVING, SLOW_DOWN, ROUTINE_0, ROUTINE};
 
     /**
      * @brief ImplementControl variable manager
@@ -60,6 +60,8 @@ namespace Core {
         Utils::Timing::EdgeDetector slowDownEdge;
         /** @brief Instructions from the controller to disable the implement ImplementControl, the robot is e.g. in spinning mode */
         bool disableImplement;
+        /** @brief ImplementControl */
+        int navModeMemory;
     public:
         ImplementControl();
         ~ImplementControl() = default;

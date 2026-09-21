@@ -14,6 +14,15 @@ const vector<vector<PointPtr>>& PointData::getAllPoints()
     return this->series;
 }
 
+vector<PointPtr> PointData::getAllPointsFlat()
+{
+    vector<PointPtr> flatPoints;
+    for (const auto& serie : this->series) {
+        flatPoints.insert(flatPoints.end(), serie.begin(), serie.end());
+    }
+    return flatPoints;
+}
+
 int PointData::getNumSeries()
 {
     return int(this->series.size());
@@ -39,9 +48,9 @@ int PointData::getNumPoints(uint serie)
     return this->series[serie].size();
 }
 
-int PointData::getNumFields(uint i)
+int PointData::getNumFields(uint serie)
 {
-    return int(this->metadata[i].size());
+    return int(this->metadata[serie].size());
 }
 
 bool PointData::isPolygon(uint i)
