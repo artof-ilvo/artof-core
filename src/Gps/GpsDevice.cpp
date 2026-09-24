@@ -111,10 +111,15 @@ void GpsDevice::serverTick() {
     getVariable("pc.gps.hrp_mode")->setValue<double>(hrp_mode);
 
     // Forward GPS parameters to the PC
-    getVariable("plc.control.gps.fix")->setValue<int>(fix);
-    getVariable("plc.control.gps.latitude")->setValue<double>(lat);
-    getVariable("plc.control.gps.longitude")->setValue<double>(lng);
-    getVariable("plc.control.gps.altitude")->setValue<double>(height);
+    try {
+        getVariable("plc.control.gps.fix")->setValue<int>(fix);
+        getVariable("plc.control.gps.latitude")->setValue<double>(lat);
+        getVariable("plc.control.gps.longitude")->setValue<double>(lng);
+        getVariable("plc.control.gps.altitude")->setValue<double>(height);
+    } catch (RedisNoSuchVariableException e) {
+        LoggerStream::getInstance() << WARN << e.what();
+    }
+    
 
 
     if ( !getVariable("pc.simulation.active")->getValue<bool>() ) {

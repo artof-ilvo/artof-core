@@ -113,7 +113,7 @@ void Navigation::serverTick()
     // detect edges
     bool activeAuto = getVariable("pc.simulation.auto")->getValue<bool>() || 
         getVariable("plc.monitor.state.auto")->getValue<bool>() || 
-        getVariable("plc.monitor.state.aware")->getValue<bool>() ||
+        getVariable("plc.monitor.substate.aware")->getValue<bool>() ||
         getVariable("plc.monitor.state.steer")->getValue<bool>() || 
         getVariable("plc.monitor.state.throttle")->getValue<bool>();
     edgeDetectorField.detect( getVariable("pc.field.updated")->getValue<bool>());

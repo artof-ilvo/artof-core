@@ -102,7 +102,7 @@ void Hitch::setActivateDiscrete(VariableManager* manager,bool activate) {
 
 void Hitch::setActivateRoutine(VariableManager* manager, int routine) {
     active_routine = routine;
-    string variableName = "plc.control." + getEntityName() + ".activate_routine";
+    string variableName = "plc.control." + getEntityName() + ".activate_sections.0";
     manager->getVariable(variableName)->setValue(routine);
 }
 
@@ -138,7 +138,7 @@ bool Hitch::updateActivateDiscrete(VariableManager* manager) {
 }
 
 int Hitch::updateActivateRoutine(VariableManager* manager) { 
-    string variableName = "plc.control." + getEntityName() + ".activate_routine";
+    string variableName = "plc.control." + getEntityName() + ".activate_sections.0";
     active_routine = manager->existsVariable(variableName) ? manager->getVariable(variableName)->getValue<int>() : 0;
     return active_routine;
 }
