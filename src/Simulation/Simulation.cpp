@@ -56,9 +56,9 @@ void Simulation::serverTick() {
         //    z .____ x
         double yVelocity = getVariable("plc.control.navigation.velocity.longitudinal")->getValue<double>();
         double xVelocity = 0;
-        if (platform.navModesContainsId(AlgorithmMode::PP_SPINNING_180)) {
-            xVelocity = getVariable("plc.control.navigation.velocity.lateral")->getValue<double>();
-        }
+        // if (platform.navModesContainsId(AlgorithmMode::PP_SPINNING_180)) {
+        xVelocity = getVariable("plc.control.navigation.velocity.lateral")->getValue<double>();
+        // }
         double zVelocity = getVariable("plc.control.navigation.velocity.angular")->getValue<double>();
 
         getVariable("plc.monitor.navigation.velocity.longitudinal")->setValue<double>(yVelocity);

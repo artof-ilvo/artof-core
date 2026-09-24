@@ -212,12 +212,9 @@ void ImplementControl::updateDiscrete(Task& task)
     }
     case ROUTINE:
     {    
-        bool discreteImplementActive = manager->getVariable("plc.monitor." + task.getHitch().getEntityName() + ".busy")->getValue<bool>();
-        busyDiscrImplEdge.detect(discreteImplementActive);
         // Routine of external controller
         // Check if routine is set to zero by pc routine
-        // Check if busy is set to false by plc routine
-        if (task.getHitch().updateActivateRoutine(manager) == 0 || busyDiscrImplEdge.falling) {
+        if (task.getHitch().updateActivateRoutine(manager) == 0 ) { 
             LoggerStream::getInstance() << DEBUG <<"ROUTINE -> DRIVING";
             manager->getVariable("pc.implement.slow_down")->setValue(false);
             task.getHitch().setActivateRoutine(manager, 0);
