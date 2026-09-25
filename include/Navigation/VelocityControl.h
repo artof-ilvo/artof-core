@@ -12,12 +12,13 @@ namespace Core {
         double angVelMem = 0.0;
 
         double sign(double x) { return (x > 0) - (x < 0); }
-        double stepTowards(double current, double target, double maxStep);
     public:
         VelocityControl(double maxLinearAcc, double maxAngularAcc);
         ~VelocityControl() = default;
 
-        void update(double &lonVel, double &latVel, double &omega, double dt_secs);
+        void update(double targetLon, double targetLat, double targetOmega, 
+                                    double &outLon, double &outLat, double &outOmega, 
+                                    double dt_secs);
     };
 
 }

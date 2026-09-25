@@ -115,7 +115,7 @@ namespace Settings {
         std::string name;
         Robot robot;
         Velocity autoVel;
-        MaxAccel maxAccel;
+        MaxAccel autoMaxAccel;
         std::vector<NavigationMode> navModes;
         std::vector<AutoMode> autoModes;
         std::vector<Hitch> hitches;

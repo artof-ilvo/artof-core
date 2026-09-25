@@ -87,6 +87,7 @@ void Platform::load(const json& j)
 
         robot = Robot(j["robot"]);
         autoVel = Velocity(j["auto_velocity"]);
+        autoMaxAccel = MaxAccel(j["auto_max_accel"]);
 
         for (json nav_mode: j["nav_modes"]) {
             navModes.push_back(NavigationMode(nav_mode));
@@ -140,6 +141,7 @@ json Platform::toJson() const {
     json j;
     j["name"] = name;
     j["robot"] = robot.toJson();
+    j["auto_max_accel"] = autoMaxAccel.toJson();
     j["auto_velocity"] = autoVel.toJson();
     j["nav_modes"] = json::array();
     for (NavigationMode nav_mode: navModes) {
@@ -184,9 +186,9 @@ Velocity::Velocity(json j)
 MaxAccel::MaxAccel(json j)
 {
     if (j.contains("linear")) linear = j["linear"];
-    else throw SettingsParamNotFoundException("max_acceleration", "linear");
+    else throw SettingsParamNotFoundException("auto_max_accel", "linear");
     if (j.contains("angular")) angular = j["angular"];
-    else throw SettingsParamNotFoundException("max_acceleration", "angular");
+    else throw SettingsParamNotFoundException("auto_max_accel", "angular");
 }
 
 json NavigationMode::toJson() const {

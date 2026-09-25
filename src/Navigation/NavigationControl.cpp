@@ -18,7 +18,7 @@ using namespace std;
 
 NavigationControl::NavigationControl() : 
     platform(Platform::getInstance()),
-    velocityControl(platform.maxAccel.linear, platform.maxAccel.angular)
+    velocityControl(platform.autoMaxAccel.linear, platform.autoMaxAccel.angular)
 {}
 
 void NavigationControl::init(Utils::Redis::VariableManager* manager, shared_ptr<Traject> traject, shared_ptr<PositionData> position) {
@@ -618,11 +618,12 @@ void NavigationControl::setVelocityOperation(double longitudinalVelocity, double
     double lonVel = longitudinalVelocity;
     double latVel = lateralVelocity;
     double angVel = omega;
-    velocityControl.update(lonVel, latVel, angVel, manager->getElapsedSeconds());
+    // velocityControl.update(longitudinalVelocity, lateralVelocity, omega, 
+    //     lonVel, latVel, angVel, manager->getElapsedSeconds());
 
     if (platform.robot.config == "4wd4ws") {
         manager->getVariable("plc.control.navigation.velocity.longitudinal")->setValue<double>(lonVel);
-            manager->getVariable("plc.control.navigation.velocity.lateral")->setValue<double>(latVel);
+        manager->getVariable("plc.control.navigation.velocity.lateral")->setValue<double>(latVel);
         manager->getVariable("plc.control.navigation.velocity.angular")->setValue<double>(angVel);
         manager->getVariable("plc.control.navigation.sideways")->setValue<bool>(getActiveSideways());
     } else if(platform.robot.config == "omni") {

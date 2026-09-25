@@ -1,49 +1,63 @@
 #include <Navigation/VelocityControl.h>
+#include <Utils/Logging/LoggerStream.h>
 #include <math.h>
 
 using namespace Ilvo::Core;
+using namespace Ilvo::Utils::Logging;
 
 
 VelocityControl::VelocityControl(double maxLinearAcc, double maxAngularAcc) : maxLinearAcc(maxLinearAcc), maxAngularAcc(maxAngularAcc)
 {}
 
-// Helper to clamp a scalar step towards a target
-double VelocityControl::stepTowards(double current, double target, double maxStep) {
-    double delta = target - current;
-    if (std::abs(delta) <= maxStep) {
-        return target;
-    }
-    return current + (delta > 0 ? maxStep : -maxStep);
-}
 
-
-void VelocityControl::update(double &lonVel, double &latVel, double &omega, double dt_secs)
+void VelocityControl::update(double targetLon, double targetLat, double targetOmega, 
+                            double &outLon, double &outLat, double &outOmega, 
+                            double dt_secs)
 {
-    // Linear acceleration
-    double targetLon = lonVel;
-    double targetLat = latVel;
+    // TODO check that it works
+    
 
+    // 1. Linear acceleration limiting
     double dLon = targetLon - lonVelMem;
     double dLat = targetLat - latVelMem;
     double requiredAcc = std::sqrt(dLon * dLon + dLat * dLat) / dt_secs;
 
+
+
     if (requiredAcc > maxLinearAcc && requiredAcc > 0.0) {
         double maxStep = maxLinearAcc * dt_secs;
-        // Scale the change vector to fit within maxLinearAcc
         double scale = maxStep / (requiredAcc * dt_secs);
-        lonVel = lonVelMem + dLon * scale;
-        latVel = latVelMem + dLat * scale;
+        outLon = lonVelMem + dLon * scale;
+        outLat = latVelMem + dLat * scale;
     } else {
-        lonVel = targetLon;
-        latVel = targetLat;
+        outLon = targetLon;
+        outLat = targetLat;
     }
 
-    // Angular acceleration
+    // 2. Angular acceleration limiting
     double maxAngStep = maxAngularAcc * dt_secs;
-    omega = stepTowards(angVelMem, omega, maxAngStep);
+
+    double delta = targetOmega - angVelMem;
+    if (std::abs(delta) <= maxAngStep) {
+        outOmega = targetOmega;
+    }
+    outOmega = angVelMem + (delta > 0 ? maxAngStep : -maxAngStep);
+
+        // Logging all linear acceleration variables
+    LoggerStream::getInstance() << DEBUG 
+                                << "requiredAcc: " << requiredAcc 
+                                << " | maxLinearAcc: " << maxLinearAcc 
+                                << " | maxAngularAcc: " << maxAngularAcc 
+                                << " | targetLon: " << targetLon 
+                                << " | targetLat: " << targetLat 
+                                << " | targetOmega: " << targetOmega 
+                                << " | outLon" << outLon
+                                << " | outLat" << outLat
+                                << " | outOmega" << outOmega
+                                << " | dt: " << dt_secs;
 
     // 3. Update memory state
-    lonVelMem = lonVel;
-    latVelMem = latVel;
-    angVelMem = omega;
+    lonVelMem = outLon;
+    latVelMem = outLat;
+    angVelMem = outOmega;
 }

@@ -358,12 +358,19 @@ bool Task::cardanEnabled(VariableManager* manager, bool disable)
     return false;
 }
 
-void Task::activateSection(string id, bool value)
+void Task::activateSection(string id, int value)
 {
     for (auto section: implement.getSections()) {
         if (section->id.compare(id) == 0) {
-            section->setRate(value ? 1 : 0);
+            section->setRate(value);
         }
+    }
+}
+
+int Task::getSectionFeedback(string id)
+{
+    for (auto section: implement.getSections()) {
+        return section->getRate();
     }
 }
 

@@ -62,6 +62,9 @@ namespace Core {
         bool disableImplement;
         /** @brief ImplementControl */
         int navModeMemory;
+        /** @brief Edge detector for busy routine */
+        Utils::Timing::EdgeDetector routineEdge;
+
     public:
         ImplementControl();
         ~ImplementControl() = default;

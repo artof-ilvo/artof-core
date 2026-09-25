@@ -73,7 +73,6 @@ void ImplementControl::reset()
                 traject->closestPoint(task.getDiscreteReference()), 
                 traject->getInterpolation());
             currentDiscrImplState = DRIVING;
-            task.getHitch().setActivateRoutine(manager, 0);
             manager->getVariable("pc.navigation.mode")->setValue(navModeMemory);
         }
 
@@ -145,7 +144,6 @@ void ImplementControl::updateDiscrete(Task& task)
     // first execute onDiscrPoint to set implPoint properly
     double interpolationDistance = manager->getVariable("pc.purepursuit.inter_point_distance")->getValue<double>();
     double pathDistanceToNextPoint = task.distanceToNextDiscrPoint(traject->closestPoint(task.getDiscreteReference()), interpolationDistance);
-    task.activateSection("P", currentDiscrImplState == ROUTINE_0);
 
     switch (currentDiscrImplState)
     {
@@ -169,10 +167,12 @@ void ImplementControl::updateDiscrete(Task& task)
             if (routine == 0) {
                 measuringDiscreteStarted = false;
                 currentDiscrImplState = ROUTINE_0;
+                task.activateSection("P", 1);  // Activate the section
                 task.getHitch().setActivate(manager, true);
             } else {
                 currentDiscrImplState = ROUTINE;
-                task.getHitch().setActivateRoutine(manager, true);
+                // task.activateSection("P", routine);  // Activate the section << why does this not work?
+                manager->getVariable("plc.control.hitch_rb.activate_sections.0")->setValue(routine);
                 navModeMemory = manager->getVariable("pc.navigation.mode")->getValue<int>();
                 manager->getVariable("pc.navigation.mode")->setValue(5); // set navigation mode to external
                 LoggerStream::getInstance() << DEBUG <<"Discrete routine initiated: " << (int) routine << " - ROUTINE_0 -> ROUTINE";
@@ -204,6 +204,7 @@ void ImplementControl::updateDiscrete(Task& task)
                 LoggerStream::getInstance() << DEBUG <<"ROUTINE_0 -> DRIVING";
                 manager->getVariable("pc.implement.slow_down")->setValue(false);
                 task.getHitch().setActivate(manager, false);
+                task.activateSection("P", 0);  // Deactivate the section
                 currentDiscrImplState = DRIVING;
             }
         }
@@ -213,11 +214,14 @@ void ImplementControl::updateDiscrete(Task& task)
     case ROUTINE:
     {    
         // Routine of external controller
-        // Check if routine is set to zero by pc routine
-        if (task.getHitch().updateActivateRoutine(manager) == 0 ) { 
+        bool routinetActive = manager->getVariable("plc.control.hitch_rb.activate_sections.0")->getValue<int>(); 
+
+        routineEdge.detect(routinetActive);
+        if (routineEdge.falling) { 
             LoggerStream::getInstance() << DEBUG <<"ROUTINE -> DRIVING";
             manager->getVariable("pc.implement.slow_down")->setValue(false);
-            task.getHitch().setActivateRoutine(manager, 0);
+            // task.activateSection("P", routine); << why does this not work?
+            manager->getVariable("plc.control.hitch_rb.activate_sections.0")->setValue(0);
             manager->getVariable("pc.navigation.mode")->setValue(navModeMemory); // set navigation mode to normal
             currentDiscrImplState = DRIVING;
         }

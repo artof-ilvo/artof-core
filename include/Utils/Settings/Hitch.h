@@ -43,14 +43,12 @@ public:
 
     void setActivate(Redis::VariableManager* manager, bool activate);
     void setActivateDiscrete(Redis::VariableManager* manager, bool activate);
-    void setActivateRoutine(Redis::VariableManager* manager, int routine);
     void setActivateCardan(Redis::VariableManager* manager, bool activate);
     void setActivateContinuous(Redis::VariableManager* manager, bool activate);
     void setBusy(Redis::VariableManager* manager, bool busy);
 
     bool updateActivate(Redis::VariableManager* manager);
     bool updateActivateDiscrete(Redis::VariableManager* manager);
-    int updateActivateRoutine(Redis::VariableManager* manager);
     bool updateBusy(Redis::VariableManager* manager);
     int updateSetpoint(Redis::VariableManager* manager);
     double updateHeight(Redis::VariableManager* manager);
