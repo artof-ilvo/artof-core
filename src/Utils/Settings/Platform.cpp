@@ -46,8 +46,8 @@ Platform::Platform(const string& baseFilePath)
 
 bool Platform::navModesContainsId(AlgorithmMode id)
 {
-    for (int i=0; i < nav_modes.size(); i++) {
-        NavigationMode mode = nav_modes.at(i);
+    for (int i=0; i < navModes.size(); i++) {
+        NavigationMode mode = navModes.at(i);
         if (mode.id == id) return true;
     }
     return false;
@@ -55,8 +55,8 @@ bool Platform::navModesContainsId(AlgorithmMode id)
 
 bool Platform::autoModesContainsId(AutoModeId id)
 {
-    for (int i=0; i < auto_modes.size(); i++) {
-        AutoMode mode = auto_modes.at(i);
+    for (int i=0; i < autoModes.size(); i++) {
+        AutoMode mode = autoModes.at(i);
         if (mode.id == id) return true;
     }
     return false;
@@ -86,13 +86,13 @@ void Platform::load(const json& j)
         name = j["name"].get<string>();
 
         robot = Robot(j["robot"]);
-        auto_velocity = Velocity(j["auto_velocity"]);
+        autoVel = Velocity(j["auto_velocity"]);
 
         for (json nav_mode: j["nav_modes"]) {
-            nav_modes.push_back(NavigationMode(nav_mode));
+            navModes.push_back(NavigationMode(nav_mode));
         }
         for (json auto_mode: j["auto_modes"]) {
-            auto_modes.push_back(AutoMode(auto_mode));
+            autoModes.push_back(AutoMode(auto_mode));
         }
 
         for (json hitch: j["hitches"]) {
@@ -140,13 +140,13 @@ json Platform::toJson() const {
     json j;
     j["name"] = name;
     j["robot"] = robot.toJson();
-    j["auto_velocity"] = auto_velocity.toJson();
+    j["auto_velocity"] = autoVel.toJson();
     j["nav_modes"] = json::array();
-    for (NavigationMode nav_mode: nav_modes) {
+    for (NavigationMode nav_mode: navModes) {
         j["nav_modes"].push_back(nav_mode.toJson());
     }
     j["auto_modes"] = json::array();
-    for (AutoMode auto_mode: auto_modes) {
+    for (AutoMode auto_mode: autoModes) {
         j["auto_modes"].push_back(auto_mode.toJson());
     }
     j["hitches"] = json::array();
@@ -181,6 +181,14 @@ Velocity::Velocity(json j)
     else throw SettingsParamNotFoundException("velocity", "max");  
 }
 
+MaxAccel::MaxAccel(json j)
+{
+    if (j.contains("linear")) linear = j["linear"];
+    else throw SettingsParamNotFoundException("max_acceleration", "linear");
+    if (j.contains("angular")) angular = j["angular"];
+    else throw SettingsParamNotFoundException("max_acceleration", "angular");
+}
+
 json NavigationMode::toJson() const {
     json j;
     j["id"] = id;
@@ -199,6 +207,13 @@ json Velocity::toJson() const {
     json j;
     j["min"] = min;
     j["max"] = max;
+    return j;
+}
+
+json MaxAccel::toJson() const {
+    json j;
+    j["linear"] = linear;
+    j["angular"] = angular;
     return j;
 }
 
@@ -273,7 +288,7 @@ void Platform::setRedisJsonStatus(VariableManager* manager)
     } else {
         statusJson["power_level"] = 0.0;
     }
-    for (AutoMode state: auto_modes) {
+    for (AutoMode state: autoModes) {
         if (manager->getVariable("pc.simulation.active")->getValue<bool>()) {
            statusJson["current_state"] = manager->getVariable("pc.simulation.auto")->getValue<bool>() ? "auto" : "normal" ;
         } else {

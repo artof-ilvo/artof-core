@@ -15,6 +15,7 @@
 #include <fstream>
 #include <vector>
 
+#include <Navigation/VelocityControl.h>
 #include <Utils/Settings/Traject.h>
 #include <Utils/Redis/VariableManager.h>
 #include <Utils/Geometry/Transform.h>
@@ -53,6 +54,8 @@ namespace Core {
         Utils::Pid::PidController roughLateralController;
         /** @brief Pid controller for pure pursuit) */
         Utils::Pid::PidController purepursuitController;
+
+        VelocityControl velocityControl;
 
         /** @brief Velocity operation data used during creep operation */
         Utils::Settings::VelocityVector creepVelocity;

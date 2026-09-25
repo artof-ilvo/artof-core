@@ -22,7 +22,8 @@ namespace Settings {
     public:
         double width;
         double length;
-        double wheel_diameter;
+        double wheelDiameter;
+        std::string config;
 
         TransformMatrix tCenter;
         State centerState;

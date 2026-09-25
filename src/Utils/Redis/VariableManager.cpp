@@ -217,7 +217,8 @@ void VariableManager::run()
         getVariable(getHeartbeatVariableName(processName))->setValue<bool>(heartbeatPulse.generatePulse());
 
         writeRedisVariables();
-        rs.publishRedisValue(processName + "-tick", clk.poll()); 
+        elapsed_ms = clk.poll();
+        rs.publishRedisValue(processName + "-tick", elapsed_ms); 
         clk.stop();
 
         if( quit.load() ) break;    // exit normally after SIGINT
@@ -229,6 +230,8 @@ RedisStream& VariableManager::getStream()
     return rs;
 }
 
+double VariableManager::getElapsedMilliseconds() { return elapsed_ms; }
+double VariableManager::getElapsedSeconds() { return elapsed_ms * 0.001; }
 
 State VariableManager::getRedisState(string name)
 {

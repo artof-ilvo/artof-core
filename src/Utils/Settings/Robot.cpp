@@ -14,8 +14,10 @@ Robot::Robot(json j) : StateFull(j["transform"])
     else width = 1.0;
     if (j.contains("length")) length = j["length"];
     else width = 1.0;
-    if (j.contains("wheel_diameter")) wheel_diameter = j["wheel_diameter"];
-    else wheel_diameter = 1.0;
+    if (j.contains("wheel_diameter")) wheelDiameter = j["wheel_diameter"];
+    else wheelDiameter = 1.0;
+    if (j.contains("config")) config = j["config"].get<std::string>();
+    else config = "ackermann";
     if (j.contains("transform_center")) tCenter = TransformMatrix(j["transform_center"]);
     else tCenter = tRef;
     if (j.contains("transform_head")) tHead = TransformMatrix(j["transform_head"]);
@@ -26,7 +28,8 @@ json Robot::prepareJson() const {
     json j;
     j["width"] = width;
     j["length"] = length;
-    j["wheel_diameter"] = wheel_diameter;
+    j["wheel_diameter"] = wheelDiameter;
+    j["config"] = config;
     j["transform_center"] = tCenter.toJson();
     j["transform_head"] = tHead.toJson();
     return j;

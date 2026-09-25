@@ -23,6 +23,21 @@ namespace Ilvo {
 namespace Utils {
 namespace Settings {
 
+    // TODO add linear and angular velocity
+    class MaxAccel
+    {
+    public:
+        double linear;
+        double angular;
+
+        MaxAccel() = default;
+        MaxAccel(nlohmann::json j);
+        ~MaxAccel() = default;
+
+        nlohmann::json toJson() const;
+    };
+
+    // TODO add robot type to determine the setVelocity() function
     class Velocity
     {    
     public:
@@ -99,9 +114,10 @@ namespace Settings {
     public:
         std::string name;
         Robot robot;
-        Velocity auto_velocity;
-        std::vector<NavigationMode> nav_modes;
-        std::vector<AutoMode> auto_modes;
+        Velocity autoVel;
+        MaxAccel maxAccel;
+        std::vector<NavigationMode> navModes;
+        std::vector<AutoMode> autoModes;
         std::vector<Hitch> hitches;
         Gps gps;
 

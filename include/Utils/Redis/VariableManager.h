@@ -54,6 +54,8 @@ namespace Redis {
         nlohmann::ordered_json jTypes;
         /** @brief Redis configuration defined in configuration json file */
         nlohmann::ordered_json jConfig;
+
+        double elapsed_ms = 0.0;
     private:
         // load variables
         /** @brief Load redis variables */
@@ -84,6 +86,9 @@ namespace Redis {
         void updatePlatformState();
 
         RedisStream& getStream();
+
+        double getElapsedMilliseconds();
+        double getElapsedSeconds();
 
         // pure virtual for operation
         virtual void serverTick() = 0;

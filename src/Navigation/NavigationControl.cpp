@@ -17,7 +17,8 @@ using bprinter::TablePrinter;
 using namespace std;
 
 NavigationControl::NavigationControl() : 
-    platform(Platform::getInstance())
+    platform(Platform::getInstance()),
+    velocityControl(platform.maxAccel.linear, platform.maxAccel.angular)
 {}
 
 void NavigationControl::init(Utils::Redis::VariableManager* manager, shared_ptr<Traject> traject, shared_ptr<PositionData> position) {
@@ -142,7 +143,7 @@ void NavigationControl::purePursuit() {
         if (closestCurvyPointPtr != nullptr && carrotCurvyPointPtr != nullptr) {
             if (carrotCurvyPointPtr->radius > 0.0 || closestCurvyPointPtr->radius > 0.0) {
                 double radius = std::max(carrotCurvyPointPtr->radius, closestCurvyPointPtr->radius);
-                linearVelocity = platform.auto_velocity.min;
+                linearVelocity = platform.autoVel.min;
                 carrotDistance = radius;
                 if (carrotDistance < minCarrotDistance) carrotDistance = minCarrotDistance;
             }
@@ -176,7 +177,7 @@ void NavigationControl::purePursuit() {
     }   
     // slow down mode
     if (manager->getVariable("pc.implement.slow_down")->getValue<bool>()) {
-        linearVelocity = platform.auto_velocity.min;
+        linearVelocity = platform.autoVel.min;
     }
 
     // PID controller to remove steady state errors
@@ -295,7 +296,7 @@ bool NavigationControl::creepToCorner() {
         if (algorithm.fsmState == CREEP_SIDEWAYS) {
             if (distanceToIntersection < 1.0) {
                 lateralVelocity = creepVelocity.lateral * distanceToIntersection;
-                if (abs(lateralVelocity) < platform.auto_velocity.min) lateralVelocity = sgn(lateralVelocity) * platform.auto_velocity.min; // saturation on 0.2 m/s
+                if (abs(lateralVelocity) < platform.autoVel.min) lateralVelocity = sgn(lateralVelocity) * platform.autoVel.min; // saturation on 0.2 m/s
             } else {
                 lateralVelocity = creepVelocity.lateral;
             }
@@ -305,7 +306,7 @@ bool NavigationControl::creepToCorner() {
         } else {
             // drive forward until the turning point
             longitudinalVelocity = creepVelocity.longitudinal * (distanceToIntersection / manager->getVariable("pc.purepursuit.carrot_distance")->getValue<double>());   // speed is proportional with the distance to the intersec point
-            if (longitudinalVelocity < platform.auto_velocity.min) longitudinalVelocity = platform.auto_velocity.min; // saturation on platform.auto_velocity.min m/s
+            if (longitudinalVelocity < platform.autoVel.min) longitudinalVelocity = platform.autoVel.min; // saturation on platform.autoVel.min m/s
             lateralVelocity = 0.0;
         }
 
@@ -318,7 +319,7 @@ bool NavigationControl::creepToPosition()
 {
     // if last point, creep to last point
     if (position->corners.nextCorner.cornerIndex >= traject->cornersLength()-1) {
-        setVelocityOperation(platform.auto_velocity.min);
+        setVelocityOperation(platform.autoVel.min);
         return true;
     }
 
@@ -333,7 +334,7 @@ bool NavigationControl::creepToPosition()
         setVelocityOperation();
         return false;
     } else {
-        setVelocityOperation(-platform.auto_velocity.min);
+        setVelocityOperation(-platform.autoVel.min);
         return true;
     }
 }
@@ -489,7 +490,7 @@ void NavigationControl::stateMachineGTurn() {
                 double angleDifferenceDegree = abs(calcSmallestAngle(algorithm.headingGoal, newPathOrientation));
                 double velocityAngleDegrees = 90 - angleDifferenceDegree;
                 double signY = traject->isPointLeft(position->corners.nextCorner.index+1, position->currentPoint);
-                double absoluteLinvel = platform.auto_velocity.min;
+                double absoluteLinvel = platform.autoVel.min;
                 creepVelocity.set(absoluteLinvel * sin(DegToRad(velocityAngleDegrees)), signY * absoluteLinvel * cos(DegToRad(velocityAngleDegrees)));
 
                 algorithm.fsmState = CREEP_SIDEWAYS;
@@ -531,7 +532,7 @@ void NavigationControl::stateMachineGTurn() {
 
 void NavigationControl::setTurningVelocity()
 {
-    double longitudinalVelocity = platform.auto_velocity.min; // safety speed
+    double longitudinalVelocity = platform.autoVel.min; // safety speed
     double signOmega = -traject->isPointLeft(position->corners.previousCorner.index-3, position->corners.nextCorner.point);
     double turningRadius = manager->getVariable("pc.navigation.turning_radius")->getValue<double>();
     double turningRadiusFactor = manager->existsVariable("pc.navigation.turning_radius_factor") ? manager->getVariable("pc.navigation.turning_radius_factor")->getValue<double>() : 1.0;
@@ -614,18 +615,26 @@ void NavigationControl::stopLinearOperation()
 
 void NavigationControl::setVelocityOperation(double longitudinalVelocity, double lateralVelocity, double omega)
 {
-    manager->getVariable("plc.control.navigation.velocity.lateral")->setValue<double>(0);
-            
-    manager->getVariable("plc.control.navigation.velocity.longitudinal")->setValue<double>(longitudinalVelocity);
-    manager->getVariable("plc.control.navigation.velocity.angular")->setValue<double>(omega);
+    double lonVel = longitudinalVelocity;
+    double latVel = lateralVelocity;
+    double angVel = omega;
+    velocityControl.update(lonVel, latVel, angVel, manager->getElapsedSeconds());
 
-    if (platform.navModesContainsId(AlgorithmMode::PP_SPINNING_180)) {
+    if (platform.robot.config == "4wd4ws") {
+        manager->getVariable("plc.control.navigation.velocity.longitudinal")->setValue<double>(lonVel);
+            manager->getVariable("plc.control.navigation.velocity.lateral")->setValue<double>(latVel);
+        manager->getVariable("plc.control.navigation.velocity.angular")->setValue<double>(angVel);
         manager->getVariable("plc.control.navigation.sideways")->setValue<bool>(getActiveSideways());
-        manager->getVariable("plc.control.navigation.velocity.lateral")->setValue<double>(lateralVelocity);
-    } else {
-        manager->getVariable("plc.control.navigation.sideways")->setValue<bool>(false);
-        manager->getVariable("plc.control.navigation.velocity.lateral")->setValue<double>(0.0);
+    } else if(platform.robot.config == "omni") {
+        manager->getVariable("plc.control.navigation.velocity.longitudinal")->setValue<double>(lonVel);
+        manager->getVariable("plc.control.navigation.velocity.lateral")->setValue<double>(latVel);
+        manager->getVariable("plc.control.navigation.velocity.angular")->setValue<double>(angVel);
+    } else {  // "diff" "ackermann" or others
+        manager->getVariable("plc.control.navigation.velocity.longitudinal")->setValue<double>(lonVel);
+        manager->getVariable("plc.control.navigation.velocity.lateral")->setValue<double>(0.0);            
+        manager->getVariable("plc.control.navigation.velocity.angular")->setValue<double>(angVel);
     }
+
 }
 
 const AlgorithmData& NavigationControl::getAlgorithmData()
