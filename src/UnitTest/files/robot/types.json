@@ -147,5 +147,10 @@
     },
     "execution": {
         "notification": "string"
+    },
+    "as_applied": {
+        "record": "bool",
+        "session": "string",
+        "heartbeat": "double"
     }
 }
