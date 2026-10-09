@@ -172,7 +172,7 @@ void ImplementControl::updateDiscrete(Task& task)
             } else {
                 currentDiscrImplState = ROUTINE;
                 // task.activateSection("P", routine);  // Activate the section << why does this not work?
-                manager->getVariable("plc.control.hitch_rb.activate_sections.0")->setValue(routine);
+                manager->getVariable("plc.control." + task.getHitch().getEntityName() + ".activate_sections.0")->setValue(routine);
                 navModeMemory = manager->getVariable("pc.navigation.mode")->getValue<int>();
                 manager->getVariable("pc.navigation.mode")->setValue(5); // set navigation mode to external
                 LoggerStream::getInstance() << DEBUG <<"Discrete routine initiated: " << (int) routine << " - ROUTINE_0 -> ROUTINE";
