@@ -214,14 +214,14 @@ void ImplementControl::updateDiscrete(Task& task)
     case ROUTINE:
     {    
         // Routine of external controller
-        bool routinetActive = manager->getVariable("plc.control.hitch_rb.activate_sections.0")->getValue<int>(); 
+        bool routinetActive = manager->getVariable("plc.control." + task.getHitch().getEntityName() + ".activate_sections.0")->getValue<int>() != 0; 
 
         routineEdge.detect(routinetActive);
         if (routineEdge.falling) { 
             LoggerStream::getInstance() << DEBUG <<"ROUTINE -> DRIVING";
             manager->getVariable("pc.implement.slow_down")->setValue(false);
             // task.activateSection("P", routine); << why does this not work?
-            manager->getVariable("plc.control.hitch_rb.activate_sections.0")->setValue(0);
+            manager->getVariable("plc.control." + task.getHitch().getEntityName() + ".activate_sections.0")->setValue(0);
             manager->getVariable("pc.navigation.mode")->setValue(navModeMemory); // set navigation mode to normal
             currentDiscrImplState = DRIVING;
         }
