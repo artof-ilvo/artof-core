@@ -24,7 +24,6 @@ namespace Settings {
 class Hitch : public StateFull
 {
 public:
-    uint id;
     std::string name;
     double min;
     double max;

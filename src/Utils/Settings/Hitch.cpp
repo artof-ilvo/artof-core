@@ -21,8 +21,7 @@ Hitch::Hitch() : StateFull()
 Hitch::Hitch(json j) : 
     StateFull(j["transform"])
 {
-    if (j.contains("id")) id = j["id"];
-    else throw SettingsParamNotFoundException("hitch", "id");
+    // An "id" key from older settings.json files is ignored: the hitch is identified by its name.
     if (j.contains("name")) name = j["name"].get<string>();
     else throw SettingsParamNotFoundException("hitch", "name"); 
     if (j.contains("min")) min = j["min"];
@@ -51,7 +50,6 @@ string Hitch::getEntityName()
 
 json Hitch::prepareJson() const {
     json j;
-    j["id"] = id;
     j["name"] = name;
     j["min"] = min;
     j["max"] = max;
