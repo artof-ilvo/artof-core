@@ -23,7 +23,7 @@ using bprinter::TablePrinter;
 PlcVariableManager::PlcVariableManager(string processName) : 
     VariableManager(processName), 
     monitorSize(0), controlSize(0),
-    byteCount(0), bitCount(0), previousEntity(""), msgWriteCounter(0)
+    byteCount(0), bitCount(0), previousEntity(""), previousWasBool(false), msgWriteCounter(0)
 {
     for(string key: variableMapKeyOrder) {
         VariablePtr var = variableMap[key];
@@ -47,22 +47,29 @@ void PlcVariableManager::resetCount() {
     if (jConfig["protocols"]["plc"]["protocol"] == "s7") {
         byteCount = 0;
     } else if (jConfig["protocols"]["plc"]["protocol"] == "udp") { 
-        bitCount = 20;  // account for header bytes
+        byteCount = 20;  // account for header bytes
     }
     bitCount = 0;
     previousEntity = "";
+    previousWasBool = false;
 }
 
 void PlcVariableManager::beginCount(VariablePtr var) {
     if (jConfig["protocols"]["plc"]["protocol"] == "s7") {
         string newEntity = var->getEntity();
-        if (var->getType() != "bool" || newEntity != previousEntity) {
+        if (previousWasBool && (var->getType() != "bool" || newEntity != previousEntity)) {
+            // close the bool group: finish the partially used byte ...
             if (bitCount != 0) {
                 bitCount = 0;
-                byteCount += 2;
+                byteCount += 1;
+            }
+            // ... and align to the next even byte (S7 word alignment)
+            if (byteCount % 2 != 0) {
+                byteCount += 1;
             }
         }
         previousEntity = newEntity;
+        previousWasBool = (var->getType() == "bool");
     } else if (jConfig["protocols"]["plc"]["protocol"] == "udp") { 
         string newEntity = var->getEntity();
         previousEntity = newEntity;
@@ -229,19 +236,21 @@ void PlcVariableManager::writeControlValuesToPlc()
         controlData[i] = 0;
     }
 
-    // Add header data
-    // The byte sequence for the header + counter (20 bytes total)
-    std::memcpy(controlData, udpSendHeader.data(), udpSendHeader.size());
+    if (jConfig["protocols"]["plc"]["protocol"] == "udp") {
+        // Add header data
+        // The byte sequence for the header + counter (20 bytes total)
+        std::memcpy(controlData, udpSendHeader.data(), udpSendHeader.size());
 
-    // Add counter (still part of the header)
-    uint32_t val = msgWriteCounter;
-    unsigned char *val_char = reinterpret_cast<unsigned char*>(&val);
-    controlData[16] = (unsigned char) (*val_char & 0xFF);
-    controlData[17] = (unsigned char) ((*val_char >> 8) & 0xFF);
-    controlData[18] = (unsigned char) ((*val_char >> 16) & 0xFF);
-    controlData[19] = (unsigned char) ((*val_char >> 24) & 0xFF);
-    // increase message counter
-    msgWriteCounter = (msgWriteCounter + 1) % std::numeric_limits<uint32_t>::max();
+        // Add counter (still part of the header)
+        uint32_t val = msgWriteCounter;
+        unsigned char *val_char = reinterpret_cast<unsigned char*>(&val);
+        controlData[16] = (unsigned char) (*val_char & 0xFF);
+        controlData[17] = (unsigned char) ((*val_char >> 8) & 0xFF);
+        controlData[18] = (unsigned char) ((*val_char >> 16) & 0xFF);
+        controlData[19] = (unsigned char) ((*val_char >> 24) & 0xFF);
+        // increase message counter
+        msgWriteCounter = (msgWriteCounter + 1) % std::numeric_limits<uint32_t>::max();
+    }
 
     // Continue with data
     resetCount();

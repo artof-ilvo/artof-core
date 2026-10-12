@@ -38,6 +38,7 @@ namespace Redis {
         int byteCount;
         int bitCount;
         std::string previousEntity;
+        bool previousWasBool;
 
         void resetCount();
         void beginCount(VariablePtr var);
