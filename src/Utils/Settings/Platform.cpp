@@ -301,9 +301,13 @@ void Platform::setRedisJsonStatus(VariableManager* manager)
         }
     }
     for (const auto& subState : subStates) {
-        if (manager->getVariable("plc.monitor.substate." + subState)->getValue<bool>()) {
-            statusJson["current_state"] = subState;
-            break;
+        if (manager->getVariable("pc.simulation.active")->getValue<bool>()) {
+           statusJson["current_substate"] = "programming";
+        } else {
+            if (manager->getVariable("plc.monitor.substate." + subState)->getValue<bool>()) {
+                statusJson["current_substate"] = subState;
+                break;
+            }
         }
     }
     manager->getStream().setRedisJsonValue("robot.status", statusJson);
