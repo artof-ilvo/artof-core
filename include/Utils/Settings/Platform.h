@@ -17,6 +17,7 @@
 #include <Utils/Settings/Hitch.h>
 #include <Utils/Settings/Gps.h>
 #include <string>
+#include <vector>
 #include <memory>
 
 namespace Ilvo {
@@ -77,6 +78,7 @@ namespace Settings {
     }
 
     enum AutoModeId { AUTO = 1, STEER = 2, THROTTLE = 3 };
+    inline const std::vector<std::string> subStates = { "programming", "implement_control", "inhibited", "aware", "stay_clear" };
 
     class AutoMode 
     {
