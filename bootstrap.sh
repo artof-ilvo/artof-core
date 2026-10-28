@@ -16,6 +16,9 @@ case "$suite" in
     *) echo "Unknown channel '$suite', use 'stable' or 'dev'." >&2; exit 1 ;;
 esac
 
+# A source left by an earlier, failed run would break apt-get update
+rm -f /etc/apt/sources.list.d/artof.sources
+
 echo "Installing prerequisites"
 apt-get update -qq
 apt-get install -y -qq ca-certificates curl gpg
@@ -25,6 +28,11 @@ fi
 systemctl enable --now docker
 
 echo "Adding the ARTOF package repository ($suite)"
+if ! curl -fsL -o /dev/null "$repo/dists/$suite/InRelease"; then
+    echo "The '$suite' channel has no published packages yet." >&2
+    [ "$suite" = "stable" ] && echo "Use the dev channel instead: ... | sudo sh -s -- dev" >&2
+    exit 1
+fi
 install -d -m 755 /etc/apt/keyrings
 curl -fsSL "$repo/artof-archive-keyring.asc" | gpg --dearmor --yes -o /etc/apt/keyrings/artof.gpg
 cat > /etc/apt/sources.list.d/artof.sources <<EOF
