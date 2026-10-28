@@ -55,6 +55,7 @@ Every install and update also takes care of the robot settings in `/var/lib/ilvo
    - an entry of the wrong type (e.g. a file named `field`) is renamed to `<name>.invalid-<date>` and replaced by the default.
 
    Existing settings are never overwritten, and folders with content are left as they are. The install output lists every repair (`artof-core: ...`).
+3. **Types** - `types.json` describes the data layout of the software version, not the robot, so it is always replaced by the version of the release. Make changes to it in this repository (`artof-core/usr/share/artof-core/defaults/types.json`), not on the robot.
 
 Restore a backup:
 ```

@@ -53,6 +53,12 @@ for default in "$DEFAULTS"/*; do
         fi
     fi
 done
+# types.json describes the data layout of this software version, not the
+# robot, so it always follows the package. The old one is in the backup.
+if ! cmp -s "$DEFAULTS/types.json" "$ILVO_PATH/types.json"; then
+    install -m 644 "$DEFAULTS/types.json" "$ILVO_PATH/types.json"
+    echo "artof-core: replaced $ILVO_PATH/types.json with the version of this release"
+fi
 # Keep the settings editable by the robot user, as before
 find "$ILVO_PATH" -user root -exec chown "$owner" {} +
 
