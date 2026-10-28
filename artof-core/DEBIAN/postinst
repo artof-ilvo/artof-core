@@ -21,16 +21,37 @@ wait_for_redis() {
 
 [ "$1" = "configure" ] || exit 0
 
-# Settings belong to the robot: restore them after a legacy upgrade and only
-# add the defaults that are missing, never overwrite an existing file.
+# Settings belong to the robot: restore them after a legacy upgrade, then
+# check every default entry. Missing or empty entries get the default, an
+# entry of the wrong type is moved aside first. Existing content is kept.
 if getent passwd 1000 >/dev/null; then owner=1000:1000; else owner=root:root; fi
 mkdir -p "$ILVO_PATH/logs"
 if [ -d "$LEGACY_BACKUP" ]; then
     cp -a "$LEGACY_BACKUP/." "$ILVO_PATH/"
     rm -rf "$LEGACY_BACKUP"
 fi
-(cd "$DEFAULTS" && find . -type f) | while read -r file; do
-    [ -e "$ILVO_PATH/$file" ] || install -D -m 644 "$DEFAULTS/$file" "$ILVO_PATH/$file"
+for default in "$DEFAULTS"/*; do
+    target="$ILVO_PATH/$(basename "$default")"
+    if [ -d "$default" ]; then
+        if [ -e "$target" ] && [ ! -d "$target" ]; then
+            mv "$target" "$target.invalid-$(date +%Y%m%d%H%M%S)"
+            echo "artof-core: $target is not a folder, moved it aside"
+        fi
+        if [ -z "$(ls -A "$target" 2>/dev/null)" ]; then
+            mkdir -p "$target"
+            cp -r "$default/." "$target/"
+            echo "artof-core: $target was empty, installed the defaults"
+        fi
+    else
+        if [ -d "$target" ]; then
+            mv "$target" "$target.invalid-$(date +%Y%m%d%H%M%S)"
+            echo "artof-core: $target is a folder, moved it aside"
+        fi
+        if [ ! -s "$target" ]; then
+            install -m 644 "$default" "$target"
+            echo "artof-core: $target was missing or empty, installed the default"
+        fi
+    fi
 done
 # Keep the settings editable by the robot user, as before
 find "$ILVO_PATH" -user root -exec chown "$owner" {} +

@@ -2,7 +2,24 @@
 set -e
 
 ILVO_PATH=/var/lib/ilvo
+BACKUP_DIR=/var/lib/ilvo-backups
+KEEP_BACKUPS=10
 LEGACY_BACKUP=/var/lib/ilvo.legacy-upgrade
+
+case "$1" in
+    install|upgrade) ;;
+    *) exit 0 ;;
+esac
+
+# Back up the robot settings before anything changes. A failed backup stops
+# the update, so the robot is never updated without one. Logs are left out.
+if [ -d "$ILVO_PATH" ] && [ -n "$(ls -A "$ILVO_PATH")" ]; then
+    mkdir -p "$BACKUP_DIR"
+    backup="$BACKUP_DIR/ilvo-$(date +%Y-%m-%d_%H%M%S)-${2:-none}.tar.gz"
+    tar -czf "$backup" -C "$(dirname "$ILVO_PATH")" --exclude="$(basename "$ILVO_PATH")/logs" "$(basename "$ILVO_PATH")"
+    echo "artof-core: backed up $ILVO_PATH to $backup"
+    ls -1t "$BACKUP_DIR"/ilvo-*.tar.gz | tail -n +$((KEEP_BACKUPS + 1)) | xargs -r rm -f
+fi
 
 # Packages up to 0.0.1 shipped the robot settings as package files in
 # $ILVO_PATH. dpkg deletes those on upgrade, so keep a copy for postinst.
