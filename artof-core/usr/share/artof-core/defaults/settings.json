@@ -1,15 +1,15 @@
 {
-    "name": "FieldWorkers-WTD",
+    "name": "SQAT",
     "robot": {
-        "width": 1.5,
-        "length": 3.8,
-        "wheel_diameter": 0.7,
-        "config": "ackermann",
+        "width": 1.66,
+        "length": 3.3,
+        "wheel_diameter": 0.75,
+        "config": "omni",
         "transform": {
             "T": [
                 0,
-                -1.0029,
-                -1.93
+                1.2,
+                -1.45
             ],
             "R": [
                 0,
@@ -38,6 +38,10 @@
         {
             "id": 5,
             "name": "external"
+        },
+        {
+            "id": 2,
+            "name": "pure pp"
         }
     ],
     "auto_modes": [
@@ -49,7 +53,7 @@
     "hitches": [
         {
             "id": 2,
-            "name": "FB",
+            "name": "RB",
             "min": 10,
             "max": 65,
             "types": [
@@ -61,8 +65,8 @@
             "transform": {
                 "T": [
                     0,
-                    0.3314,
-                    -1.3831
+                    0.332,
+                    -1.383
                 ],
                 "R": [
                     0,
@@ -76,7 +80,7 @@
     "gps": {
         "device": "socket",
         "ip": "192.168.1.21",
-        "udp_port": 23,
+        "udp_port": 24,
         "utm_zone": 31,
         "usb_port": "/dev/septentrio0",
         "ntrip_server": "flepos.vlaanderen.be",
@@ -86,7 +90,7 @@
         "antenna_rotation": -90,
         "transform": {
             "T": [
-                -0.68064,
+                -0.61,
                 0,
                 0
             ],

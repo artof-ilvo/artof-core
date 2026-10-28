@@ -19,7 +19,8 @@
         "current": "float",
         "rpm": "float",
         "temperature": "float",
-        "torque": "float"
+        "torque": "float",
+        "motor_temperature": "float"
     },
     "wheel_monitor": {
         "speed": "float",
@@ -56,17 +57,22 @@
         "feedback_sections": "array[32] of uint8"
     },
     "state": {
-        "safe": "bool",
+        "error": "bool",
+        "park": "bool",
+        "slow": "bool",
         "normal": "bool",
+        "fast": "bool",
         "auto": "bool",
-        "aware": "bool",
         "steer": "bool",
         "throttle": "bool",
-        "error": "bool"
+	"dummy": "uint8"
     },
     "substate": {
         "programming": "bool",
-        "dummy": "bool"
+        "implement_control": "bool",
+        "inhibited": "bool",
+        "aware": "bool",
+        "stay_clear": "bool"
     },
     "hitch_control": {
         "activate": "bool",
@@ -139,7 +145,8 @@
     },
     "field": {
         "name": "string",
-        "updated": "bool"
+        "updated": "bool",
+        "download": "bool"
     },
     "implement": {
         "slow_down": "bool",

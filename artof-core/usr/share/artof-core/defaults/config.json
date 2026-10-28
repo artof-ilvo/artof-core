@@ -1,10 +1,12 @@
 {
     "protocols": {
         "plc": {
-            "protocol": "udp",
-            "ip": "192.168.2.243",
-            "read_port": 1200,
-            "write_port": 1201
+            "protocol": "s7",
+            "ip": "192.168.1.2",
+	    "rack": 0,
+            "read_db": 201,
+            "slot": 1,
+            "write_db": 200
         },
         "redis": {
             "ip": "127.0.0.1",
@@ -16,15 +18,20 @@
             "control": {
                 "navigation": "navigation_control",
                 "hitch_fb": "hitch_control",
+                "hitch_rb": "hitch_control",
                 "substate": "substate"
             },
             "monitor": {
-                "wheel_rl": "wheel_monitor",
-                "wheel_rr": "wheel_monitor",
+		"drive_f": "drive_monitor",
+                "wheel_f": "wheel_monitor",
+		"drive_r": "drive_monitor",
+                "wheel_r": "wheel_monitor",
+		"drive_h": "drive_monitor",
                 "hitch_fb": "hitch_monitor",
+                "hitch_rb": "hitch_monitor",
                 "navigation": "navigation_monitor",
-                "battery": "battery_monitor",
                 "state": "state",
+                "battery": "battery_monitor",
                 "substate": "substate"
             }
         },
