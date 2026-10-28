@@ -19,19 +19,36 @@ cmake -DCMAKE_BUILD_TYPE=Debug -DINSTALL_FOLDER="/usr/bin" ../..
 Use `make -j8` to build the source code and use `make install` to install the binaries (to `/usr/bin` in this example).
 
 
-2. To release the code use the command below. 
+2. To build a Debian package locally, install the release binaries into the package tree and run the build script.
 ```
 cd build/release
-NO_ASAN=1 cmake -DCMAKE_BUILD_TYPE=Release -DINSTALL_FOLDER="<project-folder>/ilvo-artof-core/usr/bin" ../..
+NO_ASAN=1 cmake -DCMAKE_BUILD_TYPE=Release -DINSTALL_FOLDER="<project-folder>/artof-core/usr/bin" ../..
+make -j8 install
+cd ../..
+scripts/build-deb.sh artof-core "$(scripts/package-version.sh)" artof-core-local.deb
 ```
 
-Use `make -j8` to build the source code and use `make install` to install the copy the binaries to the debian package folder.
+## Install and update a robot
 
-3. (Optional) build dev package and push to minio
+Packages are published by CI to the signed APT repository in MinIO:
+- every push to `main` goes to the `dev` channel,
+- every tag `vX.Y.Z` (`git tag v1.2.0 && git push --tags`) goes to the `stable` channel.
+
+Set up a new robot once (add `-s -- dev` after `sh` to follow the dev channel):
 ```
-dpkg-deb --build artof-core artof-core-dev.deb
-mc cp artof-core-dev.deb ilvo-minio/tv115-ilvo-robotics
+curl -fsSL https://minio.ilvo.be:9000/tv115-ilvo-robotics/bootstrap.sh | sudo sh
 ```
+
+Update a robot:
+```
+artof-update            # newest version
+artof-update --list     # available versions
+artof-update <version>  # install a specific version, also to roll back
+```
+
+The package installs the `ilvo-robotics` service and a pinned Redis container, and sets `ILVO_PATH=/var/lib/ilvo`.
+The robot settings in `/var/lib/ilvo` are never overwritten: defaults from `/usr/share/artof-core/defaults` are only copied when missing.
+Redis is flushed on every upgrade so the system manager reloads `redis.init.json`.
 
 ## Build docker folder
 

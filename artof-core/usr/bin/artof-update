@@ -1,0 +1,32 @@
+#!/bin/sh
+# Update the ARTOF software on this robot.
+#   artof-update            install the newest version
+#   artof-update --list     show the available versions
+#   artof-update <version>  install a specific version (also to roll back)
+set -e
+
+if [ "$(id -u)" -ne 0 ]; then
+    exec sudo "$0" "$@"
+fi
+
+# Only refresh the ARTOF repository, not every source on the robot
+apt-get update -qq \
+    -o Dir::Etc::sourcelist=/etc/apt/sources.list.d/artof.sources \
+    -o Dir::Etc::sourceparts=- \
+    -o APT::Get::List-Cleanup=0
+
+case "$1" in
+    "")
+        apt-get install -y --only-upgrade artof-core
+        ;;
+    --list)
+        echo "Installed: $(dpkg-query -W -f '${Version}' artof-core)"
+        apt-cache madison artof-core
+        ;;
+    -h|--help)
+        sed -n '2,5p' "$0" | sed 's/^# //'
+        ;;
+    *)
+        apt-get install -y --allow-downgrades "artof-core=$1"
+        ;;
+esac

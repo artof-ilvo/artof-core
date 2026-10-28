@@ -1,0 +1,12 @@
+#!/bin/sh
+set -e
+
+# Robot settings in /var/lib/ilvo and the Redis container are kept on purpose
+case "$1" in
+    remove|purge)
+        systemctl disable ilvo-robotics.service >/dev/null 2>&1 || true
+        systemctl daemon-reload || true
+        ;;
+esac
+
+exit 0

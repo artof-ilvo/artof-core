@@ -1,0 +1,14 @@
+#!/bin/sh
+set -e
+
+ILVO_PATH=/var/lib/ilvo
+LEGACY_BACKUP=/var/lib/ilvo.legacy-upgrade
+
+# Packages up to 0.0.1 shipped the robot settings as package files in
+# $ILVO_PATH. dpkg deletes those on upgrade, so keep a copy for postinst.
+if [ "$1" = "upgrade" ] && dpkg --compare-versions "$2" le 0.0.1 && [ -d "$ILVO_PATH" ]; then
+    rm -rf "$LEGACY_BACKUP"
+    cp -a "$ILVO_PATH" "$LEGACY_BACKUP"
+fi
+
+exit 0

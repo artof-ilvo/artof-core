@@ -1,0 +1,18 @@
+[Unit]
+Description=ilvo-robotics framework
+Wants=network-online.target
+After=network-online.target docker.service
+Requires=docker.service
+StartLimitBurst=5
+StartLimitIntervalSec=30
+
+[Service]
+Environment="ILVO_PATH=/var/lib/ilvo"
+# Wait for the Redis container instead of a fixed sleep
+ExecStartPre=/bin/sh -c 'for i in $(seq 60); do redis-cli ping >/dev/null 2>&1 && exit 0; sleep 1; done; exit 1'
+ExecStart=/usr/bin/ilvo-system-manager
+Restart=on-failure
+TimeoutStartSec=90
+
+[Install]
+WantedBy=multi-user.target

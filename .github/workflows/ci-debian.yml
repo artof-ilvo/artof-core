@@ -1,24 +1,33 @@
 name: Publish Debian package
 
+# Push to main  -> "dev" APT channel
+# Tag v1.2.3    -> "stable" APT channel
 on:
   push:
     branches:
       - main
+    tags:
+      - 'v*'
   pull_request:
 
 jobs:
 
   build:
     name: "Build debian package"
-    runs-on: ubuntu-latest
+    # Must match the Ubuntu release on the robots (shared library versions)
+    runs-on: ubuntu-24.04
+    outputs:
+      version: ${{ steps.version.outputs.version }}
 
     steps:
       - name: Check out the repo
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Install dependencies
         run: |
-          sudo apt-get update 
+          sudo apt-get update
           sudo apt-get install -y cmake curl libcurl4-openssl-dev iputils-ping libboost-filesystem-dev libboost-system-dev libboost-thread-dev
           sudo mkdir -p /usr/lib/ilvo
           sudo cp dependencies/x86_64/shared/libsnap7.so /usr/lib/ilvo/libsnap7.so
@@ -27,76 +36,51 @@ jobs:
         run: |
           mkdir build
           cd build
-          cmake ..
           NO_ASAN=1 cmake -DCMAKE_BUILD_TYPE=Release -DINSTALL_FOLDER="${{ github.workspace }}/artof-core/usr/bin" .. && make -j4 install
+
+      - name: Build debian package
+        id: version
+        run: |
+          version=$(scripts/package-version.sh)
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+          scripts/build-deb.sh artof-core "$version" "artof-core_${version}_amd64.deb"
+          dpkg-deb --info artof-core_*.deb
 
       - uses: actions/upload-artifact@v4
         with:
-          name: artof-build
-          path: artof-core/
+          name: artof-deb
+          path: artof-core_*.deb
 
-  stage-debian:
-    name: "Stage debian package"
+  publish:
+    name: "Publish to APT repository"
     needs:
     - build
-    runs-on: ubuntu-latest
+    if: github.event_name == 'push'
+    runs-on: ubuntu-24.04
     environment:
-      name: staging
+      name: ${{ startsWith(github.ref, 'refs/tags/') && 'production' || 'staging' }}
 
     steps:
-      - name: Install minio client
-        run: |
-          curl https://dl.min.io/client/mc/release/linux-amd64/mc --create-dirs -o ~/minio-binaries/mc
-          chmod +x ~/minio-binaries/mc
+      - name: Check out the repo
+        uses: actions/checkout@v4
 
       - uses: actions/download-artifact@v4
         with:
-          name: artof-build
-          path: artof-core/
+          name: artof-deb
 
-      - name: Build debian package
+      - name: Install tools
         run: |
-          sudo chown -R 1000:1000 artof-core
-          sudo chmod +x artof-core/usr/lib/ilvo/libsnap7.so
-          sudo chmod +x artof-core/usr/bin/*
-          dpkg-deb --build artof-core artof-core-dev.deb
-
-      - name: Upload debian package
-        run: |
-          export PATH=$PATH:~/minio-binaries/
-          mc alias set ilvo-minio ${{ secrets.MINIO_ENDPOINT }} ${{ secrets.MINIO_ACCESS_KEY }} ${{ secrets.MINIO_SECRET_KEY }} --api S3v4
-          mc cp artof-core-dev.deb ilvo-minio/tv115-ilvo-robotics
-
-  deploy-debian:
-    name: "Deploy debian package"
-    needs:
-    - build
-    runs-on: ubuntu-latest
-    environment:
-      name: production
-
-    steps:
-      - name: Install minio client
-        run: |
+          sudo apt-get install -y apt-utils
           curl https://dl.min.io/client/mc/release/linux-amd64/mc --create-dirs -o ~/minio-binaries/mc
           chmod +x ~/minio-binaries/mc
+          echo ~/minio-binaries >> "$GITHUB_PATH"
 
-      - uses: actions/download-artifact@v4
-        with:
-          name: artof-build
-          path: artof-core/
+      - name: Import signing key
+        run: echo "${{ secrets.APT_SIGNING_KEY }}" | gpg --batch --import
 
-      - name: Build debian package
+      - name: Publish package
         run: |
-          sudo chown -R 1000:1000 artof-core
-          sudo chmod +x artof-core/usr/lib/ilvo/libsnap7.so
-          sudo chmod +x artof-core/usr/bin/*
-          dpkg-deb --build artof-core artof-core-${{ vars.DEBIAN_PACKAGE_TAG }}.deb
-          dpkg-deb --build artof-core artof-core-latest.deb
-
-      - name: Upload debian package
-        run: |
-          export PATH=$PATH:~/minio-binaries/
           mc alias set ilvo-minio ${{ secrets.MINIO_ENDPOINT }} ${{ secrets.MINIO_ACCESS_KEY }} ${{ secrets.MINIO_SECRET_KEY }} --api S3v4
-          mc cp artof-core-${{ vars.DEBIAN_PACKAGE_TAG }}.deb ilvo-minio/tv115-ilvo-robotics
-          mc cp artof-core-latest.deb ilvo-minio/tv115-ilvo-robotics
+          suite=${{ startsWith(github.ref, 'refs/tags/') && 'stable' || 'dev' }}
+          scripts/publish-apt.sh "$suite" artof-core_*.deb
+          mc cp bootstrap.sh ilvo-minio/tv115-ilvo-robotics/bootstrap.sh
