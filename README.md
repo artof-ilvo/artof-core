@@ -121,7 +121,7 @@ All configuration lives in `$ILVO_PATH` (`/var/lib/ilvo` on a robot):
 | `implement/<name>.json` | An implement: its types, sections and their position relative to the hitch. |
 | `logs/` | Log files written by the processes. |
 
-The defaults for a new robot are in `artof-core/usr/share/artof-core/defaults`. The `config-master` folder holds the configuration for the [Docker setup](#docker-setup) and mirrors `ilvo/data`.
+The defaults for a new robot are in `artof-core/usr/share/artof-core/defaults`. This folder is the single source of the configuration: the [Docker setup](#docker-setup) is generated from it.
 
 ## Development
 
@@ -209,14 +209,15 @@ Keep a backup of the APT signing key outside GitHub. If it is lost, a new key mu
 cd ilvo
 docker compose up -d
 ```
-`ilvo/data` is mounted as `ILVO_PATH`. It contains the same files as the package defaults, with these differences:
+`ilvo/data` is mounted as `ILVO_PATH`. **Do not edit its configuration by hand**: it is generated from the package defaults in `artof-core/usr/share/artof-core/defaults`, with the Docker-specific values of `ilvo/docker-overrides.json` applied:
 - `config.json`: Redis is reached at `"ip": "redis"`, the compose service name, instead of `127.0.0.1`.
 - `redis.init.json`: the add-on containers mount the host data folder in `HostConfig.Binds`, join the compose network through `HostConfig.NetworkMode` (`ilvo_artof_network`) and publish their ports through `ExposedPorts` and `HostConfig.PortBindings`.
 
-When the package defaults change, copy the fields, implements, `settings.json` and `types.json` to `ilvo/data`:
+After changing a default or an override, regenerate `ilvo/data` and commit both:
 ```
-cp -r artof-core/usr/share/artof-core/defaults/{field,implement,settings.json,types.json} ilvo/data/
+scripts/sync-configs.py
 ```
+CI runs `scripts/sync-configs.py --check` and fails when `ilvo/data` is out of date.
 
 ## Debug
 

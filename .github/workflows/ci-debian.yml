@@ -25,6 +25,9 @@ jobs:
         with:
           fetch-depth: 0
 
+      - name: Check the Docker configuration is in sync with the package defaults
+        run: python3 scripts/sync-configs.py --check
+
       - name: Install dependencies
         run: |
           sudo apt-get update

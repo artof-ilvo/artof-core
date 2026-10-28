@@ -1,15 +1,15 @@
 {
-    "name": "robotframework",
+    "name": "SQAT",
     "robot": {
-        "width": 1.5,
-        "length": 3.8,
-        "wheel_diameter": 0.7,
-        "config": "ackermann",
+        "width": 1.66,
+        "length": 3.3,
+        "wheel_diameter": 0.75,
+        "config": "omni",
         "transform": {
             "T": [
                 0,
-                -1.0029,
-                -1.93
+                1.2,
+                -1.45
             ],
             "R": [
                 0,
@@ -28,14 +28,6 @@
     },
     "nav_modes": [
         {
-            "id": 1,
-            "name": "pp 90\u00b0 turn"
-        },
-        {
-            "id": 2,
-            "name": "pp 180\u00b0 turn"
-        },
-        {
             "id": 3,
             "name": "pure pp"
         },
@@ -46,6 +38,10 @@
         {
             "id": 5,
             "name": "external"
+        },
+        {
+            "id": 2,
+            "name": "pure pp"
         }
     ],
     "auto_modes": [
@@ -57,7 +53,7 @@
     "hitches": [
         {
             "id": 2,
-            "name": "FB",
+            "name": "RB",
             "min": 10,
             "max": 65,
             "types": [
@@ -69,8 +65,8 @@
             "transform": {
                 "T": [
                     0,
-                    0.3314,
-                    -1.3831
+                    0.332,
+                    -1.383
                 ],
                 "R": [
                     0,
@@ -79,35 +75,12 @@
                 ]
             },
             "link_length": 0.601
-        },
-        {
-            "id": 4,
-            "name": "RB",
-            "min": 10,
-            "max": 58,
-            "types": [
-                "hitch",
-                "continuous",
-                "discrete",
-                "intermittent"
-            ],
-            "transform": {
-                "T": [
-                    0,
-                    -2.45,
-                    -1.2
-                ],
-                "R": [
-                    0,
-                    0,
-                    0
-                ]
-            },
-            "link_length": 0.55
         }
     ],
     "gps": {
-        "device": "serial",
+        "device": "socket",
+        "ip": "192.168.1.21",
+        "udp_port": 24,
         "utm_zone": 31,
         "usb_port": "/dev/septentrio0",
         "ntrip_server": "flepos.vlaanderen.be",
@@ -117,7 +90,7 @@
         "antenna_rotation": -90,
         "transform": {
             "T": [
-                -0.68064,
+                -0.61,
                 0,
                 0
             ],

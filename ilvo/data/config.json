@@ -1,11 +1,12 @@
 {
     "protocols": {
-        "snap7": {
-            "ip": "192.168.1.1",
+        "plc": {
+            "protocol": "s7",
+            "ip": "192.168.1.2",
             "rack": 0,
-            "read_db": 35,
+            "read_db": 201,
             "slot": 1,
-            "write_db": 43
+            "write_db": 200
         },
         "redis": {
             "ip": "redis",
@@ -21,19 +22,16 @@
                 "substate": "substate"
             },
             "monitor": {
-                "drive_fl": "drive_monitor",
-                "wheel_fl": "wheel_monitor",
-                "drive_fr": "drive_monitor",
-                "wheel_fr": "wheel_monitor",
-                "drive_rl": "drive_monitor",
-                "wheel_rl": "wheel_monitor",
-                "drive_rr": "drive_monitor",
-                "wheel_rr": "wheel_monitor",
-                "imu": "imu_monitor",
+                "drive_f": "drive_monitor",
+                "wheel_f": "wheel_monitor",
+                "drive_r": "drive_monitor",
+                "wheel_r": "wheel_monitor",
+                "drive_h": "drive_monitor",
                 "hitch_fb": "hitch_monitor",
                 "hitch_rb": "hitch_monitor",
                 "navigation": "navigation_monitor",
                 "state": "state",
+                "battery": "battery_monitor",
                 "substate": "substate"
             }
         },

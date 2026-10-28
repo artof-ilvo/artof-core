@@ -46,6 +46,7 @@
                         "Binds": [
                             "/d/artof-docker/docker/data:/var/lib/ilvo"
                         ],
+                        "NetworkMode": "ilvo_artof_network",
                         "RestartPolicy": {
                             "Name": "on-failure",
                             "MaximumRetryCount": 3
@@ -56,8 +57,7 @@
                                     "HostPort": "8080"
                                 }
                             ]
-                        },
-                        "NetworkMode": "ilvo_artof_network"
+                        }
                     },
                     "ExposedPorts": {
                         "80/tcp": {}
@@ -86,6 +86,7 @@
                             "/d/artof-docker/docker/data/types.json:/var/lib/ilvo/types.json",
                             "/d/artof-docker/docker/data/redis.init.json:/var/lib/ilvo/redis.init.json"
                         ],
+                        "NetworkMode": "ilvo_artof_network",
                         "RestartPolicy": {
                             "Name": "on-failure",
                             "MaximumRetryCount": 3
@@ -96,8 +97,7 @@
                                     "HostPort": "1880"
                                 }
                             ]
-                        },
-                        "NetworkMode": "ilvo_artof_network"
+                        }
                     },
                     "ExposedPorts": {
                         "1880/tcp": {}
@@ -121,8 +121,8 @@
         "pc.purepursuit.carrot_distance": 3.5,
         "pc.purepursuit.inter_point_distance": 0.1,
         "pc.purepursuit.weight_factor": 1.0,
-        "pc.purepursuit.pid.saturation.min": -1.0,
-        "pc.purepursuit.pid.saturation.max": 1.0,
+        "pc.purepursuit.pid.saturation.min": -0.2,
+        "pc.purepursuit.pid.saturation.max": 0.2,
         "pc.field.name": "example"
     }
 }
