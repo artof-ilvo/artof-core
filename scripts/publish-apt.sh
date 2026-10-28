@@ -1,7 +1,8 @@
 #!/bin/sh
 # Add a .deb to the signed APT repository in MinIO and regenerate its index.
 # Usage: publish-apt.sh <stable|dev> <file.deb>
-# Expects an mc alias "ilvo-minio" and the signing key in the gpg keyring.
+# Expects the signing key in the gpg keyring and AWS_ACCESS_KEY_ID,
+# AWS_SECRET_ACCESS_KEY and MINIO_ENDPOINT in the environment.
 set -e
 
 if [ "$#" -ne 2 ]; then
@@ -10,13 +11,19 @@ if [ "$#" -ne 2 ]; then
 fi
 suite=$1
 deb=$2
-remote=ilvo-minio/tv115-ilvo-robotics/apt
+remote=s3://tv115-ilvo-robotics/apt
 keep_dev=20
+
+# MinIO rejects the checksum headers newer AWS CLI versions send by default
+export AWS_DEFAULT_REGION=${AWS_DEFAULT_REGION:-us-east-1}
+export AWS_REQUEST_CHECKSUM_CALCULATION=when_required
+export AWS_RESPONSE_CHECKSUM_VALIDATION=when_required
+s3() { aws --endpoint-url "$MINIO_ENDPOINT" s3 --only-show-errors "$@"; }
 
 repo=$(mktemp -d)
 trap 'rm -rf "$repo"' EXIT
 mkdir -p "$repo/pool/$suite" "$repo/dists/$suite/main/binary-amd64"
-mc mirror --quiet "$remote/pool/$suite" "$repo/pool/$suite" 2>/dev/null || true
+s3 sync "$remote/pool/$suite" "$repo/pool/$suite"
 cp "$deb" "$repo/pool/$suite/"
 
 # Dev builds pile up, keep only the newest ones
@@ -38,6 +45,6 @@ gpg --batch --yes --clearsign -o "dists/$suite/InRelease" "dists/$suite/Release"
 gpg --batch --yes -abs -o "dists/$suite/Release.gpg" "dists/$suite/Release"
 gpg --armor --export > artof-archive-keyring.asc
 
-mc mirror --quiet --overwrite --remove "pool/$suite" "$remote/pool/$suite"
-mc mirror --quiet --overwrite --remove "dists/$suite" "$remote/dists/$suite"
-mc cp --quiet artof-archive-keyring.asc "$remote/artof-archive-keyring.asc"
+s3 sync --delete "pool/$suite" "$remote/pool/$suite"
+s3 sync --delete "dists/$suite" "$remote/dists/$suite"
+s3 cp artof-archive-keyring.asc "$remote/artof-archive-keyring.asc"

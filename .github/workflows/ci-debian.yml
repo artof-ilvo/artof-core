@@ -71,16 +71,18 @@ jobs:
       - name: Install tools
         run: |
           sudo apt-get install -y apt-utils
-          curl https://dl.min.io/client/mc/release/linux-amd64/mc --create-dirs -o ~/minio-binaries/mc
-          chmod +x ~/minio-binaries/mc
-          echo ~/minio-binaries >> "$GITHUB_PATH"
+          aws --version
 
       - name: Import signing key
         run: echo "${{ secrets.APT_SIGNING_KEY }}" | gpg --batch --import
 
       - name: Publish package
+        env:
+          MINIO_ENDPOINT: ${{ secrets.MINIO_ENDPOINT }}
+          AWS_ACCESS_KEY_ID: ${{ secrets.MINIO_ACCESS_KEY }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.MINIO_SECRET_KEY }}
         run: |
-          mc alias set ilvo-minio ${{ secrets.MINIO_ENDPOINT }} ${{ secrets.MINIO_ACCESS_KEY }} ${{ secrets.MINIO_SECRET_KEY }} --api S3v4
           suite=${{ startsWith(github.ref, 'refs/tags/') && 'stable' || 'dev' }}
           scripts/publish-apt.sh "$suite" artof-core_*.deb
-          mc cp bootstrap.sh ilvo-minio/tv115-ilvo-robotics/bootstrap.sh
+          AWS_DEFAULT_REGION=us-east-1 AWS_REQUEST_CHECKSUM_CALCULATION=when_required \
+            aws --endpoint-url "$MINIO_ENDPOINT" s3 cp bootstrap.sh s3://tv115-ilvo-robotics/bootstrap.sh
