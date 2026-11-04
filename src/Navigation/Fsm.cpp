@@ -2,7 +2,6 @@
 #include <Exceptions/RobotExceptions.hpp>
 #include <Utils/Settings/Platform.h>
 #include <math.h> 
-#include <algorithm>
 
 using namespace Ilvo::Core;
 using namespace Ilvo::Exception;
@@ -249,17 +248,10 @@ bool Fsm::turn()
     if (distanceToGoal < TURN_GOAL_TOLERANCE || position->closestPoint.index >= algorithm.turnGoalIndex) {
         LoggerStream::getInstance() << DEBUG << "Turn goal reached at path index " << position->closestPoint.index << " (goal index " << algorithm.turnGoalIndex << ", " << distanceToGoal << " m from the goal)";
         return false;
+    } else {
+        setVelocityOperation(creepVelocity.longitudinal, -creepVelocity.lateral, creepVelocity.angular);
+        return true;
     }
-
-    // pure pursuit to the turn goal, no sharper than the turning radius
-    double turningRadius = manager->getVariable("pc.navigation.turning_radius")->getValue<double>();
-    Line lineToGoal(position->currentPoint, algorithm.turnGoal);
-    double alpha = DegToRad(toRobotFrame(lineToGoal.alpha()) - position->heading);
-    double maxCurvature = 1.0 / turningRadius;
-    double curvature = std::clamp(2 * sin(alpha) / distanceToGoal, -maxCurvature, maxCurvature);
-    double longitudinalVelocity = platform.autoVel.min; // safety speed
-    setVelocityOperation(longitudinalVelocity, 0.0, longitudinalVelocity * curvature);
-    return true;
 }
 
 bool Fsm::align()
@@ -321,32 +313,15 @@ bool Fsm::stopTurning(double smallestAngle, double earlyStoppingAngle)
     return condition;
 }
 
-void Fsm::setTurnGoal()
+void Fsm::setTurningVelocity()
 {
-    // nextCorner() was called when the turn started, so the corner being turned is the previous corner
-    const CornerPoint& corner = position->corners.previousCorner;
+    double longitudinalVelocity = platform.autoVel.min; // safety speed
+    double signOmega = -traject->isPointLeft(position->corners.previousCorner.index-3, position->corners.nextCorner.point);
     double turningRadius = manager->getVariable("pc.navigation.turning_radius")->getValue<double>();
-    double interpolationDistance = manager->getVariable("pc.purepursuit.inter_point_distance")->getValue<double>();
-
-    // An arc with the turning radius joins the next segment R * tan(deflection / 2) after the corner
-    double tangentDistance = 0.0;
-    if (!corner.previousRawPoint.isEmpty() && !corner.nextRawPoint.isEmpty()) {
-        double inX = corner.point.x() - corner.previousRawPoint.x(), inY = corner.point.y() - corner.previousRawPoint.y();
-        double outX = corner.nextRawPoint.x() - corner.point.x(), outY = corner.nextRawPoint.y() - corner.point.y();
-        double lengths = hypot(inX, inY) * hypot(outX, outY);
-        if (lengths > 0.0) {
-            double deflection = acos(std::clamp((inX * outX + inY * outY) / lengths, -1.0, 1.0));
-            tangentDistance = turningRadius * tan(deflection / 2);
-        }
-    }
-    // A short next segment (a headland) ends at the next corner
-    int goalIndex = corner.index + (int)(tangentDistance / interpolationDistance);
-    goalIndex = min(goalIndex, position->corners.nextCorner.index);
-    goalIndex = min(goalIndex, traject->interpolationLength() - 1);
-
-    algorithm.turnGoalIndex = goalIndex;
-    algorithm.turnGoal = *traject->getInterpolation().at(goalIndex);
-    LoggerStream::getInstance() << DEBUG << "Turn goal at path index " << goalIndex << " (" << tangentDistance << " m past corner " << corner.cornerIndex << ")";
+    double turningRadiusFactor = manager->getValueOr<double>("pc.navigation.turning_radius_factor", 1.0);
+    turningRadiusFactor = turningRadiusFactor > 0.75 ? turningRadiusFactor : 1.0;
+    double angularVelocity = signOmega * longitudinalVelocity / (turningRadius * turningRadiusFactor);
+    creepVelocity.set(longitudinalVelocity, 0.0, angularVelocity);
 }
 
 void Fsm::stopLinearOperation()
