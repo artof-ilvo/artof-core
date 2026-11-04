@@ -39,19 +39,10 @@ namespace Settings {
         std::shared_ptr<Field> field;
 
     private:
-        InterpolationType interpolationType;
         /** @brief list of interpolated points of the traject */
-        std::vector<Geometry::PointPtr>* interpolation;
-        /** @brief list of interpolated points of the traject */
-        std::vector<Geometry::PointPtr> interpolationLinear;
-        /** @brief list of interpolated points of the curvy traject */
-        std::vector<Geometry::PointPtr> interpolationCurvy;
+        std::vector<Geometry::PointPtr> interpolation;
         /** @brief list of skeleton points of the traject */
-        std::vector<Geometry::PointPtr>* skeleton;
-        /** @brief list of skeleton points of the traject */
-        std::vector<Geometry::PointPtr> skeletonLinear;
-        /** @brief list of skeleton points of the curvy traject */
-        std::vector<Geometry::PointPtr> skeletonCurvy;
+        std::vector<Geometry::PointPtr> skeleton;
         /** @brief list of corners of the traject */
         std::vector<Geometry::CornerPointPtr> corners;
 
@@ -62,16 +53,14 @@ namespace Settings {
 
         void load(std::string fieldName, int utmZoneId, 
                 double cornerDetectionAngle=15.0, double interpolationDistance=0.1, 
-                double turnRadius=6.0, InterpolationType type=InterpolationType::LINEAR);
+                double turnRadius=6.0);
         const bool empty() const;
 
         const std::vector<Geometry::PointPtr>& getRawPoints() const;
         const std::vector<Geometry::CornerPointPtr>& getCorners() const;
         Field& getField();
 
-        const std::vector<Geometry::PointPtr>& getInterpolation(InterpolationType type=InterpolationType::CURRENT) const;
-        InterpolationType getInterpolationType() const;
-        void setInterpolation(InterpolationType type);
+        const std::vector<Geometry::PointPtr>& getInterpolation() const;
 
         int rawPointsLength();
         int interpolationLength();

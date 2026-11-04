@@ -55,8 +55,7 @@ BOOST_AUTO_TEST_CASE( TrajectExamle )
 
     // Assert
     logCorners("example-corners.csv", t.getCorners());
-    logInterpolation("example-interpolation.csv", t.getInterpolation(InterpolationType::LINEAR));
-    logInterpolation("example-interpolation-curvy.csv", t.getInterpolation(InterpolationType::CURVY));
+    logInterpolation("example-interpolation.csv", t.getInterpolation());
 }
 
 BOOST_AUTO_TEST_CASE( TrajectPenetrometerS15 )
@@ -70,8 +69,7 @@ BOOST_AUTO_TEST_CASE( TrajectPenetrometerS15 )
 
     // Assert
     logCorners("penetrometer-s15-corners.csv", t.getCorners());
-    logInterpolation("penetrometer-s15-interpolation.csv", t.getInterpolation(InterpolationType::LINEAR));
-    logInterpolation("penetrometer-s15-interpolation-curvy.csv", t.getInterpolation(InterpolationType::CURVY));
+    logInterpolation("penetrometer-s15-interpolation.csv", t.getInterpolation());
 }
 
 BOOST_AUTO_TEST_CASE( TrajectPenetrometerBlok3 )
@@ -85,9 +83,7 @@ BOOST_AUTO_TEST_CASE( TrajectPenetrometerBlok3 )
 
     // Assert
     logCorners("blok3-corners.csv", t.getCorners());
-    logInterpolation("blok3-interpolation.csv", t.getInterpolation(InterpolationType::LINEAR));
-    logInterpolation("blok3-interpolation-curvy.csv", t.getInterpolation(InterpolationType::CURVY));
+    logInterpolation("blok3-interpolation.csv", t.getInterpolation());
 }
-
 
 BOOST_AUTO_TEST_SUITE_END()

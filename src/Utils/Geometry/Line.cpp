@@ -264,7 +264,7 @@ Point Line::intersection(Line line)
     }
 }
 
-vector<PointPtr> Line::interpolate(double interpolationDistance, bool curvy) const
+vector<PointPtr> Line::interpolate(double interpolationDistance) const
 {
     vector<PointPtr> interpolation;
 
@@ -276,11 +276,7 @@ vector<PointPtr> Line::interpolate(double interpolationDistance, bool curvy) con
     for (int j = 0; j < num; j++) {
         double x = pointStart.x() + j * dx;
         double y = pointStart.y() + j * dy;
-        if (curvy) {
-            interpolation.push_back(make_shared<CurvyPoint>(x, y));
-        } else {
-            interpolation.push_back(make_shared<Point>(x,y));
-        }
+        interpolation.push_back(make_shared<Point>(x,y));
     }
 
     return interpolation;

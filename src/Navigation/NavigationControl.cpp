@@ -135,23 +135,6 @@ void NavigationControl::purePursuit() {
     double minCarrotDistance = 1.5;
     double interpolationDistance = manager->getVariable("pc.purepursuit.inter_point_distance")->getValue<double>();
 
-    if (traject->getInterpolationType() == InterpolationType::CURVY) {
-        Point* closestPointPtr = traject->getInterpolation().at(position->closestPoint.index).get();
-        Point* carrotPointPtr = traject->getInterpolation().at(position->carrotPoint.index).get();
-        CurvyPoint* closestCurvyPointPtr = dynamic_cast<CurvyPoint*>(closestPointPtr);
-        CurvyPoint* carrotCurvyPointPtr = dynamic_cast<CurvyPoint*>(carrotPointPtr);
-        if (closestCurvyPointPtr != nullptr && carrotCurvyPointPtr != nullptr) {
-            if (carrotCurvyPointPtr->radius > 0.0 || closestCurvyPointPtr->radius > 0.0) {
-                double radius = std::max(carrotCurvyPointPtr->radius, closestCurvyPointPtr->radius);
-                linearVelocity = platform.autoVel.min;
-                carrotDistance = radius;
-                if (carrotDistance < minCarrotDistance) carrotDistance = minCarrotDistance;
-            }
-        } else {
-            LoggerStream::getInstance() << DEBUG << "Pure pursuit - closest and carrot point is not a CurvyPoint.";
-        }
-    }
-
     // calculate carrot point
     position->carrotPoint = traject->closestPoint(position->currentPoint, position->closestPoint.index, position->closestPoint.index + (int)(carrotDistance / interpolationDistance) + 10, carrotDistance);
 

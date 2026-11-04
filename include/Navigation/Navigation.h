@@ -51,6 +51,7 @@ namespace Core {
         /** @brief Position of the robot in respect to the traject */
         std::shared_ptr<Utils::Settings::PositionData> position;
 
+        /** @brief Reset the position on the traject, keeping the progress when the robot is near its path */
         void resetPosition();
         void updatePosition();
 
@@ -62,6 +63,8 @@ namespace Core {
         bool autoModeReset;
         /** @brief Automatic mode error (will be processed in the next cycle) */
         bool autoModeError;
+        /** @brief Check the robot orientation to the path on the next update, as when auto mode starts */
+        bool checkOrientation;
     public:
         Navigation(const std::string ns);
         ~Navigation() = default;

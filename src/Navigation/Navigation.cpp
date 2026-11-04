@@ -24,8 +24,9 @@ Navigation::Navigation(const string ns) :
     VariableManager(ns),
     platform(Platform::getInstance()),
     autoModeReset(false),
-    autoModeError(false)
-{ 
+    autoModeError(false),
+    checkOrientation(false)
+{
 }
 
 void Navigation::init()
@@ -76,19 +77,27 @@ void Navigation::updatePosition()
     }
 }
 
-void Navigation::resetPosition() 
+void Navigation::resetPosition()
 {
     if (traject->empty()) {
         throw TrajectLengthIsZero();
     }
 
     LoggerStream::getInstance() << INFO << "Reset position data";
-    // The closest point will be the start indexInPath
     double carrotDistance = getVariable("pc.purepursuit.carrot_distance")->getValue<double>();
     double interpolationDistance = getVariable("pc.purepursuit.inter_point_distance")->getValue<double>();
     position->currentPoint = position->robotRefState.getT();
+
+    // Keep the progress along the traject when the robot is near its path: a search
+    // over the whole traject could jump to an adjacent row that happens to be closer
+    if (position->currentPoint.distance(position->closestPoint) < RESET_PATH_DISTANCE_LARGE) {
+        int index = position->closestPoint.index;
+        int window = (int)(RESET_PATH_DISTANCE_DEFAULT / interpolationDistance);
+        position->closestPoint = traject->closestPoint(position->currentPoint, max(0, index - window), index + window);
+    } else {
+        position->closestPoint = traject->closestPoint(position->currentPoint);
+    }
     position->carrotPoint = traject->closestPoint(position->currentPoint, position->closestPoint.index, position->closestPoint.index + (int)(carrotDistance / interpolationDistance) + 10, carrotDistance);
-    position->closestPoint = traject->closestPoint(position->currentPoint);
     position->corners = traject->cornersByPathIndex(position->closestPoint.index);
     LoggerStream::getInstance() << DEBUG << "Closest point index: " << position->closestPoint.index;
     LoggerStream::getInstance() << DEBUG << "Carrot point index: " << position->carrotPoint.index;
@@ -122,13 +131,11 @@ void Navigation::serverTick()
     // reset traject
     if (edgeDetectorField.rising || traject->empty()) {
         // load the traject
-        algorithmMode = static_cast<AlgorithmMode>(getVariable("pc.navigation.mode")->getValue<int>());
         traject->load(Field::checkFieldName(getVariable("pc.field.name")->getValue<string>()), 
                     platform.gps.utm_zone, 
                     getVariable("pc.navigation.spin_angle")->getValue<double>(),
                     getVariable("pc.purepursuit.inter_point_distance")->getValue<double>(),
-                    getVariable("pc.navigation.turning_radius")->getValue<double>(),
-                    algorithmModeToInterpolationType[algorithmMode]);
+                    getVariable("pc.navigation.turning_radius")->getValue<double>());
 
         if (traject->empty()) {
             LoggerStream::getInstance() << DEBUG << "Traject loaded failed";
@@ -150,11 +157,17 @@ void Navigation::serverTick()
     changeDetectorAlgorithmMode.detect(algorithmMode);
     if (changeDetectorAlgorithmMode.changed) {
         LoggerStream::getInstance() << INFO << "Navigation mode changed to " << algorithmMode;
-        traject->setInterpolation(algorithmModeToInterpolationType[algorithmMode]);
         resetPosition();
         navigationControl.reset();
+        checkOrientation = true;  // the new path may point elsewhere, e.g. mid-turn
         if (algorithmMode == AlgorithmMode::EXTERNAL) {
             navigationControl.setVelocityOperation();  // Reset velocity if pressing external!
+        }
+        // The reset controllers would cut off a turn in progress: stop auto mode instead
+        if (activeAuto) {
+            LoggerStream::getInstance() << INFO << "Navigation mode changed during auto mode, stopping auto mode";
+            getVariable("pc.execution.notification")->setValue("Navigation mode changed, auto mode stopped!");
+            autoModeError = true;
         }
     }
 
@@ -199,7 +212,9 @@ void Navigation::serverTick()
     if (activeAuto && !autoModeReset && !autoModeError) 
     {
         try {
-            navigationControl.update(algorithmMode, edgeDetectorAutomode.rising);
+            bool firstTime = edgeDetectorAutomode.rising || checkOrientation;
+            checkOrientation = false;
+            navigationControl.update(algorithmMode, firstTime);
         } catch(const TrajectLengthIsZero& e) {
             getVariable("pc.execution.notification")->setValue("Traject is empty!");
             autoModeError = true;

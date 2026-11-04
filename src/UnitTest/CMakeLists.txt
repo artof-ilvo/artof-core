@@ -25,9 +25,6 @@ target_link_libraries(test-logging ilvo-logging-utils)
 add_executable(test-gps "GpsTest.cpp")
 target_link_libraries(test-gps ilvo-gps-utils ilvo-settings-utils)
 
-add_executable(test-arc "ArcTest.cpp")
-target_link_libraries(test-arc ilvo-settings-utils)
-
 add_executable(test-line "LineTest.cpp")
 target_link_libraries(test-line ilvo-settings-utils)
 

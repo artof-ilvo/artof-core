@@ -38,16 +38,19 @@ namespace Timing {
     class ChangeDetector
     {
     private:
-        T previousValue;
+        T previousValue{};
+        bool initialized;
     public:
         bool changed;
     public:
-        ChangeDetector() : changed(false) {};
+        ChangeDetector() : initialized(false), changed(false) {};
         ~ChangeDetector() = default;
 
+        /** @brief The first value only sets the reference, it is not a change */
         void detect(T newValue) {
-            changed = newValue != previousValue;
+            changed = initialized && newValue != previousValue;
             previousValue = newValue;
+            initialized = true;
         };
         T getValue() {
             return previousValue;

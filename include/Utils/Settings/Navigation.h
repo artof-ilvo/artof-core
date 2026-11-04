@@ -47,19 +47,6 @@ namespace Settings {
     };
     /** @brief Line following algorithm. */
     enum LineFollowingMode {PUREPURSUIT, MPC};
-    /** @brief Algorithm modes that determine used FSM. */
-    enum InterpolationType
-    {
-        LINEAR,
-        CURVY,
-        CURRENT
-    };
-    inline std::map<AlgorithmMode, InterpolationType> algorithmModeToInterpolationType = {
-        {PP_SPINNING_90, LINEAR},
-        {PP_SPINNING_180, LINEAR},
-        {PURE_PP, CURVY},
-        {PP_ROLL_BACK, LINEAR}
-    };
 
     class VelocityVector {
         public:
