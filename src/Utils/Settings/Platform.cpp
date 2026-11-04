@@ -44,15 +44,6 @@ Platform::Platform(const string& baseFilePath)
     LoggerStream::getInstance() << INFO << "Platform is loaded from: " << settings_path;
 }
 
-bool Platform::navModesContainsId(AlgorithmMode id)
-{
-    for (int i=0; i < navModes.size(); i++) {
-        NavigationMode mode = navModes.at(i);
-        if (mode.id == id) return true;
-    }
-    return false;
-}
-
 bool Platform::autoModesContainsId(AutoModeId id)
 {
     for (int i=0; i < autoModes.size(); i++) {
