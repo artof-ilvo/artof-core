@@ -97,6 +97,8 @@ fi
 
 systemctl daemon-reload
 systemctl enable "$SERVICE" >/dev/null 2>&1
+# Updates in quick succession must not hit the start limit meant for crash loops
+systemctl reset-failed "$SERVICE" >/dev/null 2>&1 || true
 systemctl restart "$SERVICE"
 
 exit 0

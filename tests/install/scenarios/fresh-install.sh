@@ -3,7 +3,7 @@ publish 0.6.0
 run_bootstrap
 check_installed 0.6.0
 check_healthy
-check "settings equal the defaults" diff -r -x logs "$DEFAULTS" "$ILVO_PATH"
+check "settings equal the defaults" diff -r -x logs -x node-red "$DEFAULTS" "$ILVO_PATH"
 check "no backup of an empty $ILVO_PATH" test "$(backup_count)" -eq 0
 check "systemd unit is valid" systemd-analyze verify "$SERVICE"
 check "artof-update --list shows the installed version" sh -c 'artof-update --list | grep -q "Installed: 0.6.0"'

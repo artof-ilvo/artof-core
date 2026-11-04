@@ -105,7 +105,9 @@ cleanup() {
     fi
     compose down -v --remove-orphans >/dev/null 2>&1 || true
     for addon in ${ADDONS:-}; do docker rm -f "$addon" >/dev/null 2>&1 || true; done
-    rm -rf "$WORK"
+    # Node-RED writes its data as uid 1000, which may not be this user
+    rm -rf "$WORK" 2>/dev/null || docker run --rm -v "$WORK:/work" "$IMAGE" rm -rf /work/ilvo
+    rm -rf "$WORK" || true
 }
 trap cleanup EXIT
 
