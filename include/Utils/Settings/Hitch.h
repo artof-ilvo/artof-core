@@ -75,12 +75,12 @@ private:
     int setpoint;
     // monitor values
     double height;
-    double requestedHeight;
+    double requestedHeight = 0.0;
     double angle;
 
     // detect hitch changes
     Timing::EdgeDetector edgeDetectorActivate;
-    bool hitchMoving;
+    bool hitchMoving = false;
 };
 
 inline std::ostream& operator<<(std::ostream& os, const Hitch& h) {

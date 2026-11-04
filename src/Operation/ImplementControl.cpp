@@ -130,7 +130,11 @@ void ImplementControl::updateHitch(Task& task) {
 void ImplementControl::updateContinuous(Task& task) 
 {
     bool active = task.updateSections(manager, disableImplement);
-    task.getHitch().setActivate(manager, active);
+    // A hitch task on the same hitch controls its activation (see updateHitch), otherwise the
+    // two tasks would both set it every cycle and toggle it where their task maps differ
+    if (!traject->getField().hasTaskWithTypeOnHitch("hitch", task.getHitch().name)) {
+        task.getHitch().setActivate(manager, active);
+    }
 } 
 
 void ImplementControl::updateCardan(Task& task) 
