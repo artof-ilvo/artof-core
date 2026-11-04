@@ -7,12 +7,34 @@ on:
     tags:
       - 'v*'
   pull_request:
+  workflow_dispatch:
 
 jobs:
 
+  test-docker:
+    name: "Test Docker setup"
+    runs-on: ubuntu-24.04
+
+    steps:
+      - name: Check out the repo
+        uses: actions/checkout@v4
+
+      - name: Test the configuration generator and the compose configuration
+        run: |
+          sudo apt-get install -y -qq python3-yaml
+          python3 -m unittest discover -v -s tests/docker
+
+      - name: Shellcheck
+        run: shellcheck -S warning tests/docker/e2e.sh
+
+      - name: Run the compose stack
+        run: ARTOF_DOCKER_TEST=1 tests/docker/e2e.sh
+
   stage-docker:
     name: "Stage Docker image"
-    if: ${{ !startsWith(github.ref, 'refs/tags/') }}
+    needs:
+    - test-docker
+    if: ${{ !startsWith(github.ref, 'refs/tags/') && github.event_name != 'workflow_dispatch' }}
     runs-on: ubuntu-latest
     
     environment:
@@ -43,6 +65,8 @@ jobs:
 
   deploy-docker:
     name: "Deploy Docker image"
+    needs:
+    - test-docker
     if: startsWith(github.ref, 'refs/tags/')
     runs-on: ubuntu-latest
     
