@@ -370,8 +370,11 @@ void Task::activateSection(string id, int value)
 int Task::getSectionFeedback(string id)
 {
     for (auto section: implement.getSections()) {
-        return section->getRate();
+        if (section->id.compare(id) == 0) {
+            return section->getRate();
+        }
     }
+    return 0;
 }
 
 bool Task::insideTaskMap(shared_ptr<Section> section, bool disable)
