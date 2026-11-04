@@ -72,6 +72,14 @@ class DockerClient{
 
         bool exists_container(const std::string& container_id);
 
+        /**
+         * @brief Host path mounted at container_path in the container this process runs in
+         * 
+         * @param container_path: mount destination inside this container
+         * @return the host path, or empty when not running in a container or not mounted
+         */
+        std::string own_mount_source(const std::string& container_path);
+
         const std::string& get_last_command() const;
     private:
         std::string last_command;

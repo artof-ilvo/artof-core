@@ -22,5 +22,7 @@ COPY dependencies/x86_64/static/libshp.a /app/dependencies/x86_64/static/libshp.
 WORKDIR /app/build
 RUN NO_ASAN=1 cmake -DCMAKE_BUILD_TYPE=Release -DINSTALL_FOLDER="/usr/bin" .. && make -j4 install
 
-# Command to run your application
-CMD ilvo-system-manager
+# Command to run your application. The system manager stops cleanly on SIGINT,
+# and runs as PID 1 so it receives the signal
+STOPSIGNAL SIGINT
+CMD ["ilvo-system-manager"]

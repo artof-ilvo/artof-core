@@ -1,0 +1,61 @@
+{
+    "config.json": {
+        "protocols": {
+            "redis": {
+                "ip": "redis"
+            }
+        }
+    },
+    "redis.init.json": {
+        "system": {
+            "ilvoAddons": {
+                "system": {
+                    "DockerConfig": {
+                        "HostConfig": {
+                            "NetworkMode": "ilvo_artof_network",
+                            "PortBindings": {
+                                "80/tcp": [
+                                    {
+                                        "HostPort": "8080"
+                                    }
+                                ]
+                            }
+                        },
+                        "ExposedPorts": {
+                            "80/tcp": {}
+                        },
+                        "Env": [
+                            "REDIS_HOST=redis"
+                        ]
+                    }
+                },
+                "node-red": {
+                    "DockerConfig": {
+                        "HostConfig": {
+                            "Binds": [
+                                "/var/lib/ilvo/node-red:/data",
+                                "/var/lib/ilvo/field:/var/lib/ilvo/field",
+                                "/var/lib/ilvo/implement:/var/lib/ilvo/implement",
+                                "/var/lib/ilvo/config.json:/var/lib/ilvo/config.json",
+                                "/var/lib/ilvo/settings.json:/var/lib/ilvo/settings.json",
+                                "/var/lib/ilvo/types.json:/var/lib/ilvo/types.json",
+                                "/var/lib/ilvo/redis.init.json:/var/lib/ilvo/redis.init.json"
+                            ],
+                            "NetworkMode": "ilvo_artof_network",
+                            "PortBindings": {
+                                "1880/tcp": [
+                                    {
+                                        "HostPort": "1880"
+                                    }
+                                ]
+                            }
+                        },
+                        "ExposedPorts": {
+                            "1880/tcp": {}
+                        }
+                    }
+                }
+            }
+        }
+    }
+}

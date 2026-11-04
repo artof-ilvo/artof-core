@@ -2,6 +2,7 @@ name: Publish Debian package
 
 # Push to main  -> "dev" APT channel
 # Tag v1.2.3    -> "stable" APT channel
+# Pull requests and manual runs only build and test the package
 on:
   push:
     branches:
@@ -9,6 +10,7 @@ on:
     tags:
       - 'v*'
   pull_request:
+  workflow_dispatch:
 
 jobs:
 
@@ -24,6 +26,9 @@ jobs:
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
+
+      - name: Check the Docker configuration is in sync with the package defaults
+        run: python3 scripts/sync-configs.py --check
 
       - name: Install dependencies
         run: |
@@ -51,10 +56,64 @@ jobs:
           name: artof-deb
           path: artof-core_*.deb
 
+  lint:
+    name: "Lint install scripts"
+    runs-on: ubuntu-24.04
+
+    steps:
+      - name: Check out the repo
+        uses: actions/checkout@v4
+
+      - name: Shellcheck
+        run: |
+          shellcheck -S warning bootstrap.sh scripts/*.sh artof-core/usr/bin/artof-update \
+            artof-core/DEBIAN/preinst artof-core/DEBIAN/postinst artof-core/DEBIAN/prerm artof-core/DEBIAN/postrm
+          shellcheck -S warning -s sh -x -P tests/install tests/install/run.sh tests/install/lib.sh
+          shellcheck -S warning -s sh tests/install/scenarios/*.sh
+
+  install-test:
+    name: "Install test (${{ matrix.scenario }})"
+    needs:
+    - build
+    # A fresh runner per scenario, so they cannot affect each other
+    runs-on: ubuntu-24.04
+    strategy:
+      fail-fast: false
+      matrix:
+        scenario:
+        - fresh-install
+        - upgrade
+        - legacy-upgrade
+        - rollback
+        - broken-settings
+        - backup-rotation
+        - redis-pin
+        - offline-registry
+        - partial-configure
+        - remove-purge
+
+    steps:
+      - name: Check out the repo
+        uses: actions/checkout@v4
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: artof-deb
+
+      - name: Install test tools
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq apt-utils
+
+      - name: Run scenario
+        run: sudo env ARTOF_INSTALL_TEST=1 sh tests/install/run.sh artof-core_*.deb ${{ matrix.scenario }}
+
   publish:
     name: "Publish to APT repository"
     needs:
     - build
+    - lint
+    - install-test
     if: github.event_name == 'push'
     runs-on: ubuntu-24.04
     environment:

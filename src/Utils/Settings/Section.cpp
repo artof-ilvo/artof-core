@@ -18,7 +18,7 @@ Section::Section(Section& section) :
 {}
 
 Section::Section(json j) :
-    StateFull(j["transform"])
+    StateFull(j["transform"]), parallel_angle(0.0)
 {
     if (j.contains("id")) id = j["id"].get<string>(); else id = "";
 
@@ -42,7 +42,7 @@ Section::Section(json j) :
         repeats = 1;
     };
     if (j.contains("offset")) offset = j["offset"]; else offset = 0.0;
-    if (j.contains("link_length")) link_length = j["link_length"];
+    if (j.contains("link_length")) link_length = j["link_length"]; else link_length = 0.0;
     if (j.contains("parallel_transform")) parallel_transform = TransformMatrix(j["parallel_transform"]);
 }
 

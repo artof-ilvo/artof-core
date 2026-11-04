@@ -2,6 +2,7 @@
 #include <Utils/Logging/LoggerStream.h>
 #include <utility>
 #include <sstream>
+#include <unistd.h>
 
 using namespace Ilvo::Utils::Docker;
 using namespace Ilvo::Utils::Logging;
@@ -166,6 +167,22 @@ bool DockerClient::exists_container(const std::string& container_id){
         }
     }
     return false;
+}
+
+std::string DockerClient::own_mount_source(const std::string& container_path){
+    // Docker creates /.dockerenv in every container
+    if (access("/.dockerenv", F_OK) != 0) return "";
+    // The hostname of a container is its short id
+    char hostname[256];
+    if (gethostname(hostname, sizeof(hostname)) != 0) return "";
+    json docInspect = inspect_container(hostname);
+    if (docInspect["code"] != 200 || !docInspect["data"].contains("Mounts")) return "";
+    for (auto& mount : docInspect["data"]["Mounts"]) {
+        if (mount["Destination"] == container_path) {
+            return mount["Source"].get<std::string>();
+        }
+    }
+    return "";
 }
 
 /*

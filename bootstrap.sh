@@ -5,7 +5,8 @@
 set -e
 
 suite=${1:-stable}
-repo=https://minio.ilvo.be:9000/tv115-ilvo-robotics/apt
+# ARTOF_REPO points the install tests at a local repository
+repo=${ARTOF_REPO:-https://minio.ilvo.be:9000/tv115-ilvo-robotics/apt}
 
 if [ "$(id -u)" -ne 0 ]; then
     echo "Run this script as root (sudo)." >&2
