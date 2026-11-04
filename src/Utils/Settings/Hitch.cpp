@@ -73,21 +73,22 @@ void Hitch::setActivate(VariableManager* manager, bool activate) {
     string variableName = "plc.control." + getEntityName() + ".activate";
     manager->getVariable(variableName)->setValue(activate);
 
-    // Hitch moving detection
+    // Hitch moving detection. Every change of the activation sets a new requested height, also
+    // while the hitch is still moving: a deactivation followed by an activation (as the reset
+    // when auto mode restarts) must not leave the hitch moving to the deactivated height.
+    if (edgeDetectorActivate.rising) {
+        hitchMoving = true;
+        requestedHeight = updateSetpoint(manager);
+        LoggerStream::getInstance() << DEBUG <<"Hitch " << getEntityName() << " has started moving, height: " << height << ", requestedHeight: " << requestedHeight;
+    } else if (edgeDetectorActivate.falling) {
+        hitchMoving = true;
+        requestedHeight = 0.0;  // TODO: zo of omgekeerd?
+    }
     if (hitchMoving) {
         updateHeight(manager);
         if (abs(height - requestedHeight) <= 5.0) {
             hitchMoving = false;
             LoggerStream::getInstance() << DEBUG <<"Hitch " << getEntityName() << " has stopped moving, height: " << height << ", requestedHeight: " << requestedHeight;
-        }
-    } else {
-        if (edgeDetectorActivate.rising) {
-            hitchMoving = true;
-            requestedHeight = updateSetpoint(manager);
-            LoggerStream::getInstance() << DEBUG <<"Hitch " << getEntityName() << " has started moving, height: " << height << ", requestedHeight: " << requestedHeight;
-        } else if (edgeDetectorActivate.falling) {
-            hitchMoving = true;
-            requestedHeight = 0.0;  // TODO: zo of omgekeerd?
         }
     }
 }

@@ -1,16 +1,34 @@
 #include <Utils/Redis/RedisStream.h>
 #include <Utils/Logging/LoggerStream.h>
+#include <Exceptions/RedisExceptions.hpp>
+#include <boost/system/system_error.hpp>
 
 using namespace Ilvo::Utils::Redis;
 using namespace nlohmann;
 using namespace std;
 using namespace rediscpp;
 using namespace Ilvo::Utils::Logging;
+using namespace Ilvo::Exception;
 
 RedisStream::RedisStream(json j) : RedisStream(j["ip"], j["port"]) {}
 
 RedisStream::RedisStream(string ip, int port) : ip(ip), port(port) {
-    stream = make_stream(ip, to_string(port));
+    try {
+        stream = make_stream(ip, to_string(port));
+    } catch(boost::system::system_error& e) {
+        // e.code().message() is e.g. "Connection refused", without boost's source location
+        logConnectionError(e.code().message());
+        throw RedisConnectionException(ip, port, e.code().message());
+    } catch(std::exception& e) {
+        logConnectionError(e.what());
+        throw RedisConnectionException(ip, port, e.what());
+    }
+}
+
+void RedisStream::logConnectionError(const string& reason) {
+    LoggerStream::getInstance() << ERROR << "Cannot connect to Redis at " << ip << ":" << port << ": " << reason;
+    LoggerStream::getInstance() << ERROR << "Is the Redis server running? Check with: redis-cli -h " << ip << " -p " << port << " ping";
+    LoggerStream::getInstance() << ERROR << "The Redis address is set in protocols.redis of $ILVO_PATH/config.json";
 }
 
 RedisStream::~RedisStream() {

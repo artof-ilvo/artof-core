@@ -103,12 +103,6 @@ json Point::toJson() const {
     return j;
 }
 
-CurvyPoint::CurvyPoint() : Point(), radius(0.0) {}
-CurvyPoint::CurvyPoint(const CurvyPoint& point) : Point(point.x(), point.y()), radius(point.radius) {}
-CurvyPoint::CurvyPoint(const Point& point) : Point(point), radius(0.0) {}
-CurvyPoint::CurvyPoint(double x, double y) : Point(x, y), radius(0.0) {}
-CurvyPoint::CurvyPoint(const Point& point, double radius) : Point(point), radius(radius) {}
-CurvyPoint::CurvyPoint(double x, double y, double radius) : Point(x, y), radius(radius) {}
 
 CornerPoint::CornerPoint() : index(0), angle(0.0), cornerIndex(0), isHeadland(false), headlandDistance(0.0) {}
 CornerPoint::CornerPoint(const CornerPoint& from) : index(from.index), point(from.point), angle(from.angle), cornerIndex(from.cornerIndex), isHeadland(from.isHeadland), headlandDistance(from.headlandDistance), previousRawPoint(from.previousRawPoint), nextRawPoint(from.nextRawPoint) {}

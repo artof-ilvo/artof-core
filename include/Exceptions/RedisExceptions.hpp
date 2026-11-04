@@ -104,6 +104,18 @@ namespace Exception {
         const char* what() const throw() { return s.c_str(); }
     };
 
+    struct RedisConnectionException : public std::exception
+    {
+        std::string s;
+        RedisConnectionException(std::string ip, int port, std::string reason) {
+            std::stringstream ss;
+            ss << "Cannot connect to Redis at " << ip << ":" << port << ": " << reason;
+            s = ss.str();
+        }
+        ~RedisConnectionException() throw () {} // Updated
+        const char* what() const throw() { return s.c_str(); }
+    };
+
     struct RedisMalformedConfigException : public std::exception
     {
         std::string s;

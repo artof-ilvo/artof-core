@@ -5,7 +5,6 @@
 #include <Utils/Logging/LoggerStream.h>
 #include <Utils/File/PointShapeFile.h>
 #include <Utils/File/PointCsvFile.h>
-#include <Utils/Geometry/Arc.h>
 #include <ThirdParty/json.hpp>
 #include <boost/filesystem.hpp>
 #include <Exceptions/FileExceptions.hpp>
@@ -29,7 +28,7 @@ Traject::Traject() :
 }
 
 
-void Traject::load(std::string fieldName, int utmZoneId, double cornerDetectionAngle, double interpolationDistance, double turnRadius, InterpolationType type) 
+void Traject::load(std::string fieldName, int utmZoneId, double cornerDetectionAngle, double interpolationDistance, double turnRadius) 
 {
     // load the field
     field = std::make_shared<Field>(fieldName, utmZoneId);
@@ -39,7 +38,6 @@ void Traject::load(std::string fieldName, int utmZoneId, double cornerDetectionA
 
         // helper objects
         Line l1, l2;
-        Arc a;
 
         // ** Clear all old data
         // clear corners and add first point
@@ -49,15 +47,10 @@ void Traject::load(std::string fieldName, int utmZoneId, double cornerDetectionA
         cornerIndex++;
         LoggerStream::getInstance() << DEBUG << *corners.back();
 
-        // clear interpolation linear
-        interpolationLinear.clear();
-        // clear interpolationCurvy
-        interpolationCurvy.clear();
-
-        // clear skeletonLinear
-        skeletonLinear.clear();
-        // clear skeletonCurvy
-        skeletonCurvy.clear();
+        // clear interpolation
+        interpolation.clear();
+        // clear skeleton
+        skeleton.clear();
 
         // ** Detect Corners and linear interpolation
         int i = 0;
@@ -67,10 +60,10 @@ void Traject::load(std::string fieldName, int utmZoneId, double cornerDetectionA
             l1 = Line(*p1, *p2);
 
             // Add point to skeleton
-            skeletonLinear.push_back(p1);
+            skeleton.push_back(p1);
             // Add interpolated line
             auto newInterpolationData = l1.interpolate(interpolationDistance);
-            interpolationLinear.insert(interpolationLinear.end(), newInterpolationData.begin(), newInterpolationData.end());
+            interpolation.insert(interpolation.end(), newInterpolationData.begin(), newInterpolationData.end());
 
             // corner detection
             if (i < rawPointsLength()-2) {
@@ -88,7 +81,7 @@ void Traject::load(std::string fieldName, int utmZoneId, double cornerDetectionA
                 }
 
                 if (cornerDetection) {
-                    corners.push_back(make_shared<CornerPoint>(interpolationLinear.size()-1, *p2, cornerAngle, cornerIndex, *p1, *p3));
+                    corners.push_back(make_shared<CornerPoint>(interpolation.size()-1, *p2, cornerAngle, cornerIndex, *p1, *p3));
                     cornerIndex += 1;
                     // headland detection
                     if (i < rawPointsLength()-3) {
@@ -110,100 +103,18 @@ void Traject::load(std::string fieldName, int utmZoneId, double cornerDetectionA
         }
 
         // add last point to skeleton
-        skeletonLinear.push_back(getRawPoints().at(i));
+        skeleton.push_back(getRawPoints().at(i));
         // add last point as corner
         l1 = Line(getRawPoints().at(i-1), getRawPoints().at(i));
-        corners.push_back(make_shared<CornerPoint>(interpolationLinear.size()-1, *getRawPoints().at(i), 0, cornerIndex, *getRawPoints().at(i-1), Point()));
+        corners.push_back(make_shared<CornerPoint>(interpolation.size()-1, *getRawPoints().at(i), 0, cornerIndex, *getRawPoints().at(i-1), Point()));
         LoggerStream::getInstance() << DEBUG << *corners.back();
-
-        // ** Interpolation Curvy
-        if (cornersLength() == 2) {
-            // If one line just add the interpolated line
-            l1 = Line(corners.at(0)->point, corners.at(1)->point);
-            interpolationCurvy = l1.interpolate(interpolationDistance, true);
-        } else {
-            // iterate over new corners
-            vector<PointPtr> interpolationCurvySkeleton;
-            interpolationCurvySkeleton.push_back(make_shared<Point>(corners.at(0)->point));
-
-            double arcInterpolationDistance = 0.5;
-            int i = 1;
-            while (i < cornersLength()) { 
-                CornerPointPtr c1 = corners.at(i);
-
-                if (c1->nextRawPoint.isEmpty()) { // Last point
-                    interpolationCurvySkeleton.push_back(make_shared<Point>(c1->point));
-                    // update i
-                    i += 1;
-                } else if (c1->isHeadland) { // It is a headland
-                    a = Arc(c1->point, c1->nextRawPoint, c1->previousRawPoint, turnRadius);
-                    vector<PointPtr> aInterpolation = a.interpolate(arcInterpolationDistance);
-
-                    interpolationCurvySkeleton.insert(interpolationCurvySkeleton.end(), aInterpolation.begin(), aInterpolation.end());
-                    // update i
-                    i += 2;  // Skip the next point
-                } else {  // It is a normal corner
-                    l1 = Line(c1->previousRawPoint, c1->point);
-                    l2 = Line(c1->point, c1->nextRawPoint);
-                    a = Arc(l1, l2, turnRadius);
-                    vector<PointPtr> aInterpolation = a.interpolate(arcInterpolationDistance);
-
-                    interpolationCurvySkeleton.insert(interpolationCurvySkeleton.end(), aInterpolation.begin(), aInterpolation.end());
-                    // update i
-                    i += 1;
-                }
-            }
-
-            // Clean other directions
-            skeletonCurvy.push_back(interpolationCurvySkeleton.at(0)); // Add first point
-            skeletonCurvy.push_back(interpolationCurvySkeleton.at(1)); // Add second point
-
-            i = 2;
-            while (i < interpolationCurvySkeleton.size()) {
-                PointPtr p1 = skeletonCurvy.at(skeletonCurvy.size()-2);
-                PointPtr p2 = skeletonCurvy.at(skeletonCurvy.size()-1);
-                PointPtr pNew = interpolationCurvySkeleton.at(i);
-                l1 = Line(*p1, *p2);
-                l2 = Line(*p2, *pNew);
-                double angle = l1.corner(l2);
-                // remove sharp angles or lines that are going backwards
-                if (angle > 90 && l2.length() > interpolationDistance) { 
-                    CurvyPoint* pCurvy = dynamic_cast<CurvyPoint*>(pNew.get());
-                    double radius = (pCurvy != nullptr) ? pCurvy->radius : 0.0;
-                    skeletonCurvy.push_back(make_shared<CurvyPoint>(pNew->x(), pNew->y(), radius));
-                } 
-
-                // update i
-                i += 1;
-            }
-
-            // add points to interpolation curvy
-            i = 0;
-            while (i < skeletonCurvy.size()-1)
-            {
-                PointPtr p1 = skeletonCurvy.at(i);
-                PointPtr p2 = skeletonCurvy.at(i+1);
-                CurvyPoint* p1Curvy = dynamic_cast<CurvyPoint*>(p1.get());
-                l1 = Line(p1, p2);
-                double radius = (p1Curvy != nullptr && l1.length() < arcInterpolationDistance + 0.01) ? p1Curvy->radius : 0.0;
-                for (PointPtr p : l1.interpolate(interpolationDistance)) {
-                    interpolationCurvy.push_back(make_shared<CurvyPoint>(p->x(), p->y(), radius));
-                }
-                // update i
-                i += 1;
-            }
-            
-        }
 
         LoggerStream::getInstance() << INFO << "Loaded traject with: ";
         LoggerStream::getInstance() << INFO << "- " << getRawPoints().size() << " field traject points";
-        LoggerStream::getInstance() << INFO << "- " << interpolationLinear.size() << " interpolated points";
-        LoggerStream::getInstance() << INFO << "- " << skeletonLinear.size() << " skeleton linear points";
-        LoggerStream::getInstance() << INFO << "- " << interpolationCurvy.size() << " interpolated curvy points";
-        LoggerStream::getInstance() << INFO << "- " << skeletonCurvy.size() << " skeleton curvy points";
+        LoggerStream::getInstance() << INFO << "- " << interpolation.size() << " interpolated points";
+        LoggerStream::getInstance() << INFO << "- " << skeleton.size() << " skeleton points";
         LoggerStream::getInstance() << INFO << "- " << corners.size() << " corners";
 
-        setInterpolation(type);
         loaded = true;
     } else {
         loaded = false;
@@ -220,32 +131,9 @@ const vector<PointPtr>& Traject::getRawPoints() const
     return field->getTrajectPoints(); 
 }
 
-const vector<PointPtr>& Traject::getInterpolation(InterpolationType type) const
+const vector<PointPtr>& Traject::getInterpolation() const
 { 
-    if (type == InterpolationType::CURRENT) {
-        return *interpolation;
-    } else if (type == InterpolationType::LINEAR) {
-        return interpolationLinear;
-    } else {
-        return interpolationCurvy;
-    }
-}
-
-InterpolationType Traject::getInterpolationType() const
-{
-    return interpolationType;
-}
-
-void Traject::setInterpolation(InterpolationType type)  
-{
-    interpolationType = type;
-    if (interpolationType == InterpolationType::CURVY) {
-        interpolation = &interpolationCurvy;
-        skeleton = &skeletonCurvy;
-    } else {
-        interpolation = &interpolationLinear;
-        skeleton = &skeletonLinear;
-    }
+    return interpolation;
 }
 
 const vector<CornerPointPtr>& Traject::getCorners() const
@@ -260,7 +148,7 @@ Field& Traject::getField()
 
 int Traject::interpolationLength() 
 {
-    return int(interpolation->size());
+    return int(interpolation.size());
 }
 
 int Traject::cornersLength() 
@@ -279,7 +167,7 @@ IndexPoint Traject::closestPoint(Point currentPoint)
     int minindex = 0;
 
     for (int i = 0; i < interpolationLength(); i++) {
-        double dist = interpolation->at(i)->distance(currentPoint);
+        double dist = interpolation.at(i)->distance(currentPoint);
 
         // find the closest point
         if (dist < mindist) {
@@ -288,7 +176,7 @@ IndexPoint Traject::closestPoint(Point currentPoint)
         }
     }
 
-    return IndexPoint(*interpolation->at(minindex), minindex);
+    return IndexPoint(*interpolation.at(minindex), minindex);
 }
 
 IndexPoint Traject::closestPoint(Point currentPoint, int startIdx, int endIdx, double distance) 
@@ -299,7 +187,7 @@ IndexPoint Traject::closestPoint(Point currentPoint, int startIdx, int endIdx, d
 
     for (int i = startIdx; i < endIdx; i++) {
         if (i < interpolationLength) {
-            Point p_path = *interpolation->at(i);
+            Point p_path = *interpolation.at(i);
 
             double dist = p_path.distance(currentPoint);
 
@@ -316,7 +204,7 @@ IndexPoint Traject::closestPoint(Point currentPoint, int startIdx, int endIdx, d
         throw TrajectIndexException(minIndex, interpolationLength);
     }
 
-    return IndexPoint(*interpolation->at(minIndex), minIndex);
+    return IndexPoint(*interpolation.at(minIndex), minIndex);
 }
 
 CornerPoint Traject::cornerByPathIndex(int indexInPath) 
@@ -341,7 +229,7 @@ CornerPoint Traject::cornerByIndex(int cornerIndex)
     }
 }
 
-NextAndPreviousCorner Traject::cornersByPathIndex(int indexInPath) 
+NextAndPreviousCorner Traject::cornersByPathIndex(int indexInPath)
 {
     if (!loaded) {
         throw TrajectNotLoadedException();
@@ -376,11 +264,11 @@ Line Traject::pathLine(int idx)
     // if idx is last point take point in front of it
     if (idx >= interpolationLength()-1) 
     {
-        line = Line(*interpolation->at(interpolationLength()-2), *interpolation->at(interpolationLength()-1));
+        line = Line(*interpolation.at(interpolationLength()-2), *interpolation.at(interpolationLength()-1));
     }
     else // take point after this point
     {
-        line = Line(*interpolation->at(idx), *interpolation->at(idx+1));
+        line = Line(*interpolation.at(idx), *interpolation.at(idx+1));
     }
     return line;
 }
@@ -425,7 +313,7 @@ json Traject::toJson() const
     json j = field->toJson();
 
     json skeleton = json::array();
-    for (auto pointPtr: *this->skeleton) {
+    for (auto pointPtr: this->skeleton) {
         skeleton.push_back(pointPtr->toJson());
     }
 

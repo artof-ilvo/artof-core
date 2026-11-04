@@ -78,6 +78,12 @@ namespace Redis {
 
         /** @brief Check if a redis variable key exists */
         bool existsVariable(std::string key);
+        /** @brief Value of a variable, or defaultValue when the variable does not exist */
+        template <typename T>
+        T getValueOr(std::string key, T defaultValue)
+        {
+            return existsVariable(key) ? getVariable(key)->getValue<T>() : defaultValue;
+        }
         
         /** @brief Get redis json states */
         Settings::State getRedisState(std::string name);

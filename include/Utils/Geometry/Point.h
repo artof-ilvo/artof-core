@@ -118,21 +118,6 @@ namespace Geometry {
 
     typedef std::shared_ptr<CornerPoint> CornerPointPtr;
 
-    class CurvyPoint: public Point
-    {
-    public:
-        CurvyPoint();
-        CurvyPoint(const CurvyPoint& from);
-        CurvyPoint(const Point& point);
-        CurvyPoint(const Point& point, double radius);
-        CurvyPoint(double x, double y);
-        CurvyPoint(double x, double y, double radius);
-        ~CurvyPoint() = default;
-
-        double radius;
-    };
-
-    typedef std::shared_ptr<CurvyPoint> CurvyPointPtr;
 
 
     class NextAndPreviousCorner

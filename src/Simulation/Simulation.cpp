@@ -1,3 +1,4 @@
+#include <Exceptions/RedisExceptions.hpp>
 #include <Utils/Geometry/Transform.h>
 #include <Utils/Geometry/Angle.h>
 #include <Utils/Logging/LoggerStream.h>
@@ -27,7 +28,25 @@ Simulation::Simulation(const string ns) :
 {}
 
 void Simulation::init() {
-    field = std::make_shared<Field>(Field::checkFieldName(getVariable("pc.field.name")->getValue<string>()), platform.gps.utm_zone);
+    field = std::make_shared<Field>(getVariable("pc.field.name")->getValue<string>(), platform.gps.utm_zone);
+}
+
+void Simulation::simulateHitches() {
+    for (Hitch& hitch : platform.hitches) {
+        string name = hitch.getEntityName();
+        string heightName = "plc.monitor." + name + ".height";
+        if (!existsVariable(heightName)) {
+            continue;
+        }
+        // The hitch moves to the setpoint when activated and to 0 when deactivated, see Hitch::setActivate
+        bool activate = getVariable("plc.control." + name + ".activate")->getValue<bool>();
+        auto timer = hitchMoveTimers.try_emplace(name, HITCH_MOVE_TIME).first;
+        if (timer->second.expired(activate)) {
+            double height = activate ? getVariable("plc.control." + name + ".setpoint")->getValue<int>() : 0.0;
+            getVariable(heightName)->setValue<double>(height);
+            LoggerStream::getInstance() << DEBUG << "Simulated hitch " << name << " reached height " << height;
+        }
+    }
 }
 
 void Simulation::serverTick() {
@@ -43,7 +62,7 @@ void Simulation::serverTick() {
     // update field
     edgeDetectorField.detect( getVariable("pc.field.updated")->getValue<bool>());
     if ( edgeDetectorField.falling ) {
-        field = std::make_shared<Field>(Field::checkFieldName(getVariable("pc.field.name")->getValue<string>()), platform.gps.utm_zone);
+        field = std::make_shared<Field>(getVariable("pc.field.name")->getValue<string>(), platform.gps.utm_zone);
     }
 
     // simulation
@@ -56,14 +75,17 @@ void Simulation::serverTick() {
         //    z .____ x
         double yVelocity = getVariable("plc.control.navigation.velocity.longitudinal")->getValue<double>();
         double xVelocity = 0;
-        // if (platform.navModesContainsId(AlgorithmMode::PP_SPINNING_180)) {
         xVelocity = getVariable("plc.control.navigation.velocity.lateral")->getValue<double>();
-        // }
         double zVelocity = getVariable("plc.control.navigation.velocity.angular")->getValue<double>();
 
         getVariable("plc.monitor.navigation.velocity.longitudinal")->setValue<double>(yVelocity);
         getVariable("plc.monitor.navigation.velocity.lateral")->setValue<double>(xVelocity);
         getVariable("plc.monitor.navigation.velocity.angular")->setValue<double>(zVelocity);
+
+        // only when not attached to an actual robot, otherwise the PLC reports the hitch heights
+        if (!getVariable("plc.monitor.state.auto")->getValue<bool>()) {
+            simulateHitches();
+        }
 
         // ** GET NEW STATE **
         // GET DISCR IMPL DURING PROGRAMMING MODE TEST WITH PLC
@@ -130,7 +152,11 @@ int main() {
     string procName = "ilvo-simulation";
     LoggerStream::createInstance(procName);
     LoggerStream::getInstance() << INFO << "Simulation Logger started";
-    Simulation simulation(procName);
-    simulation.run();
+    try {
+        Simulation simulation(procName);
+        simulation.run();
+    } catch(const RedisConnectionException&) {
+        return 1;  // already logged with how to check the connection
+    }
     return 0;    
 }

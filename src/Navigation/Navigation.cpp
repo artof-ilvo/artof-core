@@ -1,4 +1,9 @@
+#include <Exceptions/RedisExceptions.hpp>
 #include <Navigation/Navigation.h>
+#include <Navigation/FsmSpinning.h>
+#include <Navigation/FsmGTurn.h>
+#include <Navigation/FsmPurePursuit.h>
+#include <Navigation/FsmRollback.h>
 #include <boost/filesystem.hpp>
 #include <ThirdParty/json.hpp>
 #include <Utils/Settings/Field.h>
@@ -24,8 +29,10 @@ Navigation::Navigation(const string ns) :
     VariableManager(ns),
     platform(Platform::getInstance()),
     autoModeReset(false),
-    autoModeError(false)
-{ 
+    autoModeError(false),
+    checkOrientation(false),
+    activeFsm(nullptr)
+{
 }
 
 void Navigation::init()
@@ -33,7 +40,89 @@ void Navigation::init()
     LoggerStream::getInstance() << DEBUG << "Initialize Navigation.";
     traject = make_unique<Traject>();
     position = make_unique<PositionData>();
-    navigationControl.init(this, traject, position);
+    // create the state machine of every navigation mode
+    fsms[PP_SPINNING_90] = make_unique<FsmSpinning>(this, traject, position);
+    fsms[PP_SPINNING_180] = make_unique<FsmGTurn>(this, traject, position);
+    fsms[PURE_PP] = make_unique<FsmPurePursuit>(this, traject, position);
+    fsms[PP_ROLL_BACK] = make_unique<FsmRollback>(this, traject, position);
+    activeFsm = fsms[PP_SPINNING_90].get();
+    // set the velocity operation to zero
+    activeFsm->setVelocityOperation();
+}
+
+void Navigation::resetFsms()
+{
+    for (auto& fsm : fsms) {
+        fsm.second->reset();
+    }
+}
+
+void Navigation::updateFsm(bool firstTime) {
+    // check if rtk fix
+    if (!getVariable("pc.simulation.active")->getValue<bool>()) {
+        if (getVariable("pc.gps.fix")->getValue<int>() != 4) {
+            throw NoRtkFix();
+        } 
+    }
+
+    // check if current position is in the geofence polygon
+    if (traject->outsideGeofence(position->currentPoint)) {
+        throw RobotOutsideGeofence();
+    }
+
+    // Only continue when no external navigation algorithm is active
+    if (algorithmMode == AlgorithmMode::EXTERNAL) {
+        return;
+    }
+
+    // check if path has a certain length
+    if (traject->interpolationLength() == 0) { // stop when size of path is zero
+        throw TrajectLengthIsZero();
+    } 
+
+    // check if still on the path
+    // double distanceToClosestPoint = position->currentPoint.distance(position->closestPoint);
+    // if (distanceToClosestPoint > 2.0) {
+    //     throw TrajectLost();
+    // }
+
+    // check robot orientation
+    double pathOrientation = getVariable("pc.path.orientation")->getValue<double>();
+    double robotOrientation = position->robotRefState.getR().asVector()[2];
+    double smallestAngle = calcSmallestAngleAbsolute(pathOrientation, robotOrientation);
+    // check robot orientation to closest point
+    if (smallestAngle > 120 && firstTime) {
+        LoggerStream::getInstance() << DEBUG << "pathOrientation: " << pathOrientation << " robotOrientation: " << robotOrientation << " smallestAngle: " << smallestAngle;
+        LoggerStream::getInstance() << INFO << "Robot orientation is wrong. The angle to the path is: " << smallestAngle;
+        throw WrongRobotOrientation();
+    }
+
+    // stop 1m before the end of path is reached
+    int numStopPoints = (int)(1.0 / getVariable("pc.purepursuit.inter_point_distance")->getValue<double>());
+    if ((position->closestPoint.index+1+numStopPoints) >= traject->interpolationLength()) {
+        throw EndOfTrajectIsReached();
+    }
+
+    auto fsm = fsms.find(algorithmMode);
+    if (fsm == fsms.end()) {
+        throw NoNavigationAlgorithmIdFound(algorithmMode);
+    }
+    activeFsm = fsm->second.get();
+    AlgorithmData& algorithm = activeFsm->getAlgorithmData();
+
+    // update velocities
+    if (getVariable("pc.simulation.auto")->getValue<bool>() ||
+        getVariable("plc.monitor.state.auto")->getValue<bool>() || 
+        getVariable("plc.monitor.state.throttle")->getValue<bool>()) {  // set velocities
+        algorithm.velocity.longitudinal = getVariable("pc.navigation.non_operational_velocity")->getValue<double>();
+        algorithm.longitudinalTaskVelocity = getVariable("pc.navigation.operational_velocity")->getValue<double>();
+    } else if (getVariable("plc.monitor.state.steer")->getValue<bool>()) {
+        algorithm.velocity.longitudinal = getVariable("plc.monitor.navigation.velocity.longitudinal")->getValue<double>();  // TODO what will become the unit speed check this out
+        algorithm.longitudinalTaskVelocity = algorithm.velocity.longitudinal;
+    }
+
+    // ** STATE DIAGRAM **
+    activeFsm->update();
 }
 
 void Navigation::updatePosition()
@@ -76,19 +165,27 @@ void Navigation::updatePosition()
     }
 }
 
-void Navigation::resetPosition() 
+void Navigation::resetPosition()
 {
     if (traject->empty()) {
         throw TrajectLengthIsZero();
     }
 
     LoggerStream::getInstance() << INFO << "Reset position data";
-    // The closest point will be the start indexInPath
     double carrotDistance = getVariable("pc.purepursuit.carrot_distance")->getValue<double>();
     double interpolationDistance = getVariable("pc.purepursuit.inter_point_distance")->getValue<double>();
     position->currentPoint = position->robotRefState.getT();
+
+    // Keep the progress along the traject when the robot is near its path: a search
+    // over the whole traject could jump to an adjacent row that happens to be closer
+    if (position->currentPoint.distance(position->closestPoint) < RESET_PATH_DISTANCE_LARGE) {
+        int index = position->closestPoint.index;
+        int window = (int)(RESET_PATH_DISTANCE_DEFAULT / interpolationDistance);
+        position->closestPoint = traject->closestPoint(position->currentPoint, max(0, index - window), index + window);
+    } else {
+        position->closestPoint = traject->closestPoint(position->currentPoint);
+    }
     position->carrotPoint = traject->closestPoint(position->currentPoint, position->closestPoint.index, position->closestPoint.index + (int)(carrotDistance / interpolationDistance) + 10, carrotDistance);
-    position->closestPoint = traject->closestPoint(position->currentPoint);
     position->corners = traject->cornersByPathIndex(position->closestPoint.index);
     LoggerStream::getInstance() << DEBUG << "Closest point index: " << position->closestPoint.index;
     LoggerStream::getInstance() << DEBUG << "Carrot point index: " << position->carrotPoint.index;
@@ -122,13 +219,11 @@ void Navigation::serverTick()
     // reset traject
     if (edgeDetectorField.rising || traject->empty()) {
         // load the traject
-        algorithmMode = static_cast<AlgorithmMode>(getVariable("pc.navigation.mode")->getValue<int>());
-        traject->load(Field::checkFieldName(getVariable("pc.field.name")->getValue<string>()), 
+        traject->load(getVariable("pc.field.name")->getValue<string>(), 
                     platform.gps.utm_zone, 
                     getVariable("pc.navigation.spin_angle")->getValue<double>(),
                     getVariable("pc.purepursuit.inter_point_distance")->getValue<double>(),
-                    getVariable("pc.navigation.turning_radius")->getValue<double>(),
-                    algorithmModeToInterpolationType[algorithmMode]);
+                    getVariable("pc.navigation.turning_radius")->getValue<double>());
 
         if (traject->empty()) {
             LoggerStream::getInstance() << DEBUG << "Traject loaded failed";
@@ -150,11 +245,17 @@ void Navigation::serverTick()
     changeDetectorAlgorithmMode.detect(algorithmMode);
     if (changeDetectorAlgorithmMode.changed) {
         LoggerStream::getInstance() << INFO << "Navigation mode changed to " << algorithmMode;
-        traject->setInterpolation(algorithmModeToInterpolationType[algorithmMode]);
         resetPosition();
-        navigationControl.reset();
+        resetFsms();
+        checkOrientation = true;  // the new path may point elsewhere, e.g. mid-turn
         if (algorithmMode == AlgorithmMode::EXTERNAL) {
-            navigationControl.setVelocityOperation();  // Reset velocity if pressing external!
+            activeFsm->setVelocityOperation();  // Reset velocity if pressing external!
+        }
+        // The reset controllers would cut off a turn in progress: stop auto mode instead
+        if (activeAuto) {
+            LoggerStream::getInstance() << INFO << "Navigation mode changed during auto mode, stopping auto mode";
+            getVariable("pc.execution.notification")->setValue("Navigation mode changed, auto mode stopped!");
+            autoModeError = true;
         }
     }
 
@@ -166,7 +267,7 @@ void Navigation::serverTick()
             LoggerStream::getInstance() << DEBUG <<"Pulse to terminate auto mode";
             getVariable("plc.control.navigation.end_reached")->setValue<bool>(true);
             getVariable("pc.simulation.auto")->setValue<bool>(false);
-            navigationControl.setVelocityOperation();  // reset velocities
+            activeFsm->setVelocityOperation();  // reset velocities
         } else {
             getVariable("plc.control.navigation.end_reached")->setValue<bool>(false);
             autoModeReset = false;
@@ -184,7 +285,7 @@ void Navigation::serverTick()
         }
         
         try {
-	        navigationControl.reset();
+	        resetFsms();
         } catch(const TrajectLengthIsZero& e) {
             getVariable("pc.execution.notification")->setValue(e.what());
             autoModeError = true;
@@ -199,7 +300,9 @@ void Navigation::serverTick()
     if (activeAuto && !autoModeReset && !autoModeError) 
     {
         try {
-            navigationControl.update(algorithmMode, edgeDetectorAutomode.rising);
+            bool firstTime = edgeDetectorAutomode.rising || checkOrientation;
+            checkOrientation = false;
+            updateFsm(firstTime);
         } catch(const TrajectLengthIsZero& e) {
             getVariable("pc.execution.notification")->setValue("Traject is empty!");
             autoModeError = true;
@@ -222,11 +325,12 @@ void Navigation::serverTick()
         }
 
         if (hitchBusy) {
-            navigationControl.setVelocityOperation();
+            activeFsm->setVelocityOperation();
         }
     }
 
     // TODO also add position data
+    activeFsm->writeControllerVariables();
     getStream().setRedisJsonValue("navigation.controller.info", position->toJson(platform.gps.utm_zone));
     platform.setRedisJsonStatus(this);  
 }
@@ -240,7 +344,11 @@ int main() {
     string procName = "ilvo-navigation";
     LoggerStream::createInstance(procName);
     LoggerStream::getInstance() << INFO << "Navigation Logger started";
-    Navigation navbase(procName);
-    navbase.run();
+    try {
+        Navigation navbase(procName);
+        navbase.run();
+    } catch(const RedisConnectionException&) {
+        return 1;  // already logged with how to check the connection
+    }
     return 0;  
 }

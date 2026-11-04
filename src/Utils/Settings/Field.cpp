@@ -27,16 +27,6 @@ using json = nlohmann::json;
 Field::Field()
 {}
 
-string Field::checkFieldName(string name) {
-    string dirPath = string(getenv("ILVO_PATH")) + "/field";
-    string fieldPath = dirPath + "/" + name;
-
-    if ( !exists(fieldPath)) {
-        throw PathNotFoundException(fieldPath);
-    }
-
-    return name;
-}
 
 Field::Field(std::string name, int zoneId) : 
     baseFilePath(string(getenv("ILVO_PATH"))),

@@ -14,7 +14,8 @@
 #include <memory>
 
 #include <Utils/Timing/Clk.h>
-#include <Navigation/NavigationControl.h>
+#include <map>
+#include <Navigation/Fsm.h>
 #include <Utils/Timing/Logic.h>
 #include <Utils/Redis/VariableManager.h>
 #include <Utils/Settings/Platform.h>
@@ -51,17 +52,26 @@ namespace Core {
         /** @brief Position of the robot in respect to the traject */
         std::shared_ptr<Utils::Settings::PositionData> position;
 
+        /** @brief Reset the position on the traject, keeping the progress when the robot is near its path */
         void resetPosition();
         void updatePosition();
 
-        // Controllers
-        /** @brief Navigation controller */
-        NavigationControl navigationControl;
+        // State machines
+        /** @brief The state machine of every navigation mode */
+        std::map<Utils::Settings::AlgorithmMode, FsmPtr> fsms;
+        /** @brief The state machine of the last updated navigation mode */
+        Fsm* activeFsm;
+        /** @brief Reset the state machines */
+        void resetFsms();
+        /** @brief Check if the robot may drive, then update the state machine of the navigation mode */
+        void updateFsm(bool firstTime=false);
 
         /** @brief Automatic mode reset (will be processed in the next cycle) */
         bool autoModeReset;
         /** @brief Automatic mode error (will be processed in the next cycle) */
         bool autoModeError;
+        /** @brief Check the robot orientation to the path on the next update, as when auto mode starts */
+        bool checkOrientation;
     public:
         Navigation(const std::string ns);
         ~Navigation() = default;

@@ -57,7 +57,7 @@ namespace Geometry {
             bool left(Point c);
             double corner(Line line);
             Point intersection(Line line);
-            std::vector<PointPtr> interpolate(double interpolationDistance, bool curvy=false) const;
+            std::vector<PointPtr> interpolate(double interpolationDistance) const;
 
             Line& operator= (const Line& from);
     };

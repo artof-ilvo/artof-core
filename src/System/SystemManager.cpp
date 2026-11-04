@@ -1,3 +1,4 @@
+#include <Exceptions/RedisExceptions.hpp>
 #include <iostream>
 #include <string>
 #include <chrono>
@@ -211,7 +212,11 @@ int main() {
     string procName = "ilvo-system-manager";
     LoggerStream::createInstance(procName, true);
     LoggerStream::getInstance() << INFO << "System Manager Logger started";
-    SystemManager SystemManager(procName);
-    SystemManager.run();
+    try {
+        SystemManager SystemManager(procName);
+        SystemManager.run();
+    } catch(const RedisConnectionException&) {
+        return 1;  // already logged with how to check the connection
+    }
     return 0;    
 }

@@ -1,3 +1,4 @@
+#include <Exceptions/RedisExceptions.hpp>
 #include <Operation/Operation.h>
 #include <boost/filesystem.hpp>
 #include <ThirdParty/json.hpp>
@@ -59,7 +60,7 @@ void Operation::serverTick()
     edgeDetectorAutomode.detect( activeAuto );
 
     if (edgeDetectorField.rising || traject->empty()) {
-        traject->load(Field::checkFieldName(getVariable("pc.field.name")->getValue<string>()), 
+        traject->load(getVariable("pc.field.name")->getValue<string>(), 
                     platform.gps.utm_zone, 
                     getVariable("pc.navigation.spin_angle")->getValue<double>(),
                     getVariable("pc.purepursuit.inter_point_distance")->getValue<double>(),
@@ -100,7 +101,11 @@ int main() {
     string procName = "ilvo-operation";
     LoggerStream::createInstance(procName);
     LoggerStream::getInstance() << INFO << "Operation Logger started";
-    Operation operation(procName);
-    operation.run();
+    try {
+        Operation operation(procName);
+        operation.run();
+    } catch(const RedisConnectionException&) {
+        return 1;  // already logged with how to check the connection
+    }
     return 0;  
 }

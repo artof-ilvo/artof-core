@@ -65,9 +65,6 @@ namespace Settings {
         /** @brief Write the field to a json file */
         void writeJson(const std::string& relativePath) const;
         void writeJson() const;
-
-        /** @brief Get the name of the active field (extracted from Redis server) */
-        static std::string checkFieldName(std::string name);
     };
 
     inline std::ostream& operator<<(std::ostream& os, const Field& f) {

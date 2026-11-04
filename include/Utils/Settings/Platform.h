@@ -123,7 +123,6 @@ namespace Settings {
         std::vector<Hitch> hitches;
         Gps gps;
 
-        bool navModesContainsId(AlgorithmMode id);
         bool autoModesContainsId(AutoModeId id);
         Hitch& getHitch(std::string name);
         void updateState(Eigen::Affine3d ref);
