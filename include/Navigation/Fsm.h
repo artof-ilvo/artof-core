@@ -113,6 +113,8 @@ namespace Core {
          */
         bool getActiveSideways() const;
         Utils::Settings::AlgorithmData& getAlgorithmData();
+        /** @brief Write the algorithm data to the pc.navigation.controller variables */
+        void writeControllerVariables();
     };
 
     typedef std::unique_ptr<Fsm> FsmPtr;

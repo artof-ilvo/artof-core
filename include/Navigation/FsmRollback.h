@@ -24,10 +24,8 @@ namespace Core {
     class FsmRollback: public Fsm
     {
     private:
-        /** @brief Start a turn at the next corner: adaptive, or dead reckoning when another corner is nearby */
+        /** @brief Start a turn at the next corner: TURN_ADAPTIVE, or TURN_DEAD_RECKONING when another corner is nearby */
         void startTurn();
-        /** @brief Another corner is within reach of the turn, the robot creeps back to take it */
-        bool nextCornerNearby();
     public:
         using Fsm::Fsm;
 

@@ -330,6 +330,7 @@ void Navigation::serverTick()
     }
 
     // TODO also add position data
+    activeFsm->writeControllerVariables();
     getStream().setRedisJsonValue("navigation.controller.info", position->toJson(platform.gps.utm_zone));
     platform.setRedisJsonStatus(this);  
 }

@@ -38,20 +38,22 @@ namespace Settings {
     enum FsmState {
         STRAIGHTLINE, 
         SPINNING, 
-        TURN, 
+        TURN_DEAD_RECKONING, 
         CREEP_SIDEWAYS, 
         CREEP_TO_CORNER, 
         CREEP_TO_POSITION,
-        ALIGN
+        ALIGN,
+        TURN_ADAPTIVE
     };
     inline std::map<FsmState, std::string> fsmStateToString = {
         {STRAIGHTLINE, "STRAIGHTLINE"},
         {SPINNING, "SPINNING"},
-        {TURN, "TURN"},
+        {TURN_DEAD_RECKONING, "TURN_DEAD_RECKONING"},
         {CREEP_SIDEWAYS, "CREEP_SIDEWAYS"},
         {CREEP_TO_CORNER, "CREEP_TO_CORNER"},
         {CREEP_TO_POSITION, "CREEP_TO_POSITION"},
-        {ALIGN, "ALIGN"}
+        {ALIGN, "ALIGN"},
+        {TURN_ADAPTIVE, "TURN_ADAPTIVE"}
     };
     /** @brief Line following algorithm. */
     enum LineFollowingMode {PUREPURSUIT, MPC};
@@ -70,14 +72,6 @@ namespace Settings {
                 this->lateral = lateral;
                 this->angular = angular;
             };
-
-            inline nlohmann::json toJson() const {
-                nlohmann::json j;
-                j["longitudinal"] = longitudinal;
-                j["lateral"] = lateral;
-                j["angular"] = angular;
-                return j;
-            }
     };
 
     /** @brief Pure pursuit data that is used in the state machines. */
@@ -89,7 +83,7 @@ namespace Settings {
 
             // Finite state machine
             /** @brief Finite state machine - Current state of the FSM. */
-            FsmState fsmState;
+            FsmState fsmState = STRAIGHTLINE;
 
             // Velocity
             /** @brief Velocity - Longitudinal velocity during normal operation (outside a task). */
@@ -101,12 +95,10 @@ namespace Settings {
             /** @brief Turning - Angle (in degrees) to the heading goal. */
             double angleToGoal = 0.0;
             /** @brief Turning - The goal of the heading (in degrees) the robot should turn stop the TURNING state. */
-            double headingGoal;  // degrees
+            double headingGoal = 0.0;  // degrees
             /** @brief Turning - Flag if the robot should turn 180 degrees at the headlands */
             bool turn180 = false;
-            /** @brief Turning - Turn to the turn goal (adaptive), or dead reckoning when another corner is nearby */
-            bool adaptiveTurn = false;
-            /** @brief Turning - Point on the path the robot drives to in an adaptive turn: where an arc with the turning radius joins the next segment */
+            /** @brief Turning - Point on the path the robot drives to in the TURN_ADAPTIVE state: where an arc with the turning radius joins the next segment */
             Utils::Geometry::Point turnGoal;
             /** @brief Turning - Path index of the turn goal */
             int turnGoalIndex = 0;
@@ -114,22 +106,10 @@ namespace Settings {
             // Pure Pursuit
             /** @brief Pure Pursuit - Flag respresents if the navigation controller is in steady state, if yes, sometimes other controllers are used. */
             bool steadyState = false;
-            /** @brief Alpha (in degrees), used for calculations in the PurePursuit algorithm. */
-            double alpha = 0.0;  // degrees
+            /** @brief Alpha (in radians), used for calculations in the PurePursuit algorithm. */
+            double alpha = 0.0;  // radians
 
 
-            inline nlohmann::json toJson() const {
-                nlohmann::json j;
-                j["fsmState"] = fsmStateToString[fsmState];
-                j["velocity"] = velocity.toJson();
-                j["longitudinalTaskVelocity"] = longitudinalTaskVelocity;
-                j["angleToGoal"] = angleToGoal;
-                j["headingGoal"] = headingGoal;
-                j["turn180"] = turn180;
-                j["steadyState"] = steadyState;
-                j["alpha"] = alpha;
-                return j;
-            }
     };
 
     class PositionData {

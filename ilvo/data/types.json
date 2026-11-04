@@ -103,6 +103,20 @@
         "auto": "bool",
         "factor": "float"
     },
+    "controller": {
+        "fsm_state": "string",
+        "velocity": "direction",
+        "longitudinal_task_velocity": "float",
+        "angle_to_goal": "float",
+        "heading_goal": "float",
+        "turn180": "bool",
+        "steady_state": "bool",
+        "alpha": "float",
+        "turn_goal_index": "int",
+        "creep_velocity": "direction",
+        "previous_corner": "int",
+        "next_corner": "int"
+    },
     "navigation": {
         "non_operational_velocity": "float",
         "operational_velocity": "float",
@@ -113,7 +127,8 @@
         "spin_angle": "float",
         "stop_turn_angle": "float",
         "turning_radius": "float",
-        "turning_radius_factor": "float"
+        "turning_radius_factor": "float",
+        "controller": "controller"
     },
     "purepursuit": {
         "carrot_distance": "float",

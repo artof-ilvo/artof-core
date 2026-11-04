@@ -407,3 +407,29 @@ AlgorithmData& Fsm::getAlgorithmData()
 {
     return algorithm;
 }
+
+void Fsm::writeControllerVariables()
+{
+    // Missing when types.json has no controller type
+    if (!manager->existsVariable("pc.navigation.controller.fsm_state")) {
+        return;
+    }
+    string prefix = "pc.navigation.controller.";
+    // angles in degrees
+    manager->getVariable(prefix + "fsm_state")->setValue<string>(fsmStateToString[algorithm.fsmState]);
+    manager->getVariable(prefix + "velocity.longitudinal")->setValue<double>(algorithm.velocity.longitudinal);
+    manager->getVariable(prefix + "velocity.lateral")->setValue<double>(algorithm.velocity.lateral);
+    manager->getVariable(prefix + "velocity.angular")->setValue<double>(algorithm.velocity.angular);
+    manager->getVariable(prefix + "longitudinal_task_velocity")->setValue<double>(algorithm.longitudinalTaskVelocity);
+    manager->getVariable(prefix + "angle_to_goal")->setValue<double>(algorithm.angleToGoal);
+    manager->getVariable(prefix + "heading_goal")->setValue<double>(algorithm.headingGoal);
+    manager->getVariable(prefix + "turn180")->setValue<bool>(algorithm.turn180);
+    manager->getVariable(prefix + "steady_state")->setValue<bool>(algorithm.steadyState);
+    manager->getVariable(prefix + "alpha")->setValue<double>(RadToDeg(algorithm.alpha));
+    manager->getVariable(prefix + "turn_goal_index")->setValue<int>(algorithm.turnGoalIndex);
+    manager->getVariable(prefix + "creep_velocity.longitudinal")->setValue<double>(creepVelocity.longitudinal);
+    manager->getVariable(prefix + "creep_velocity.lateral")->setValue<double>(creepVelocity.lateral);
+    manager->getVariable(prefix + "creep_velocity.angular")->setValue<double>(creepVelocity.angular);
+    manager->getVariable(prefix + "previous_corner")->setValue<int>(position->corners.previousCorner.cornerIndex);
+    manager->getVariable(prefix + "next_corner")->setValue<int>(position->corners.nextCorner.cornerIndex);
+}
