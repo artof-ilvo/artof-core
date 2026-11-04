@@ -1,4 +1,6 @@
-version: '3'
+# Fixed project name: the add-ons join the network as ilvo_artof_network,
+# wherever this folder is
+name: ilvo
 
 services:
   redis:

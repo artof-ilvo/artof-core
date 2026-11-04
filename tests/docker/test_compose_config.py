@@ -11,8 +11,6 @@ import yaml
 
 ROOT = Path(__file__).resolve().parents[2]
 ILVO = ROOT / "ilvo"
-# Compose names its networks <project>_<network>; the project is the folder name
-PROJECT = ILVO.name
 
 
 class ComposeConfigTest(unittest.TestCase):
@@ -33,8 +31,13 @@ class ComposeConfigTest(unittest.TestCase):
                     with self.subTest(addon=addon["Name"]):
                         self.assertIn(env.split("=", 1)[1], self.compose["services"])
 
+    def test_project_name_is_fixed(self):
+        # Without it the project is named after the folder, which differs for the download
+        self.assertIn("name", self.compose)
+
     def test_addons_join_the_compose_network(self):
-        networks = {f"{PROJECT}_{name}" for name in self.compose["networks"]}
+        # Compose names its networks <project>_<network>
+        networks = {f"{self.compose['name']}_{name}" for name in self.compose["networks"]}
         for addon in self.addons:
             with self.subTest(addon=addon["Name"]):
                 self.assertIn(addon["DockerConfig"]["HostConfig"]["NetworkMode"], networks)

@@ -25,10 +25,13 @@ jobs:
           python3 -m unittest discover -v -s tests/docker
 
       - name: Shellcheck
-        run: shellcheck -S warning tests/docker/e2e.sh
+        run: shellcheck -S warning tests/docker/e2e.sh scripts/package-docker.sh scripts/publish-docker.sh
 
       - name: Run the compose stack
         run: ARTOF_DOCKER_TEST=1 tests/docker/e2e.sh
+
+      - name: Package the Docker setup
+        run: scripts/package-docker.sh axelwillekens/artof-core:dev artof-docker-test.tar.gz
 
   stage-docker:
     name: "Stage Docker image"
@@ -61,6 +64,15 @@ jobs:
           context: .
           push: ${{ github.event_name != 'pull_request' }}
           tags: ${{ vars.DOCKER_HUB_REGISTRY }}/${{ vars.DOCKER_IMAGE_NAME}}:dev
+
+      # Only after the image is pushed, so the download never runs a missing image
+      - name: Publish the Docker setup to MinIO
+        if: github.event_name == 'push'
+        env:
+          MINIO_ENDPOINT: ${{ secrets.MINIO_ENDPOINT }}
+          AWS_ACCESS_KEY_ID: ${{ secrets.MINIO_ACCESS_KEY }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.MINIO_SECRET_KEY }}
+        run: scripts/publish-docker.sh dev "${{ vars.DOCKER_HUB_REGISTRY }}/${{ vars.DOCKER_IMAGE_NAME}}:dev"
 
 
   deploy-docker:
@@ -101,3 +113,12 @@ jobs:
           context: .
           push: ${{ github.event_name != 'pull_request' }}
           tags: ${{ vars.DOCKER_HUB_REGISTRY }}/${{ vars.DOCKER_IMAGE_NAME}}:${{ github.ref_name }}
+
+      - name: Publish the Docker setup to MinIO
+        env:
+          MINIO_ENDPOINT: ${{ secrets.MINIO_ENDPOINT }}
+          AWS_ACCESS_KEY_ID: ${{ secrets.MINIO_ACCESS_KEY }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.MINIO_SECRET_KEY }}
+        run: |
+          scripts/publish-docker.sh stable "${{ vars.DOCKER_HUB_REGISTRY }}/${{ vars.DOCKER_IMAGE_NAME}}:latest"
+          scripts/publish-docker.sh "${{ github.ref_name }}" "${{ vars.DOCKER_HUB_REGISTRY }}/${{ vars.DOCKER_IMAGE_NAME}}:${{ github.ref_name }}"
