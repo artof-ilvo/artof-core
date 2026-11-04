@@ -379,7 +379,7 @@ int Task::getSectionFeedback(string id)
 
 bool Task::insideTaskMap(shared_ptr<Section> section, bool disable)
 {
-    return insideTaskMap(section, disable) != 0;
+    return getTaskMapRate(section, disable) != 0;
 }
 
 int Task::getTaskMapRate(shared_ptr<Section> section, bool disable)
