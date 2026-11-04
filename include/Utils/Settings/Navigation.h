@@ -27,6 +27,8 @@ namespace Settings {
 
     const double RESET_PATH_DISTANCE_DEFAULT = 2.0;
     const double RESET_PATH_DISTANCE_LARGE = 10.0;
+    /** @brief Distance (m) to the turn goal at which it is reached */
+    const double TURN_GOAL_TOLERANCE = 0.3;
     /** @brief Angle (degrees) to the path heading at which the robot is straight again after a turn */
     const double TURN_ALIGN_ANGLE = 5.0;
     /** @brief Distance (m) to the path at which the robot is on the path again after a turn */
@@ -102,6 +104,12 @@ namespace Settings {
             double headingGoal;  // degrees
             /** @brief Turning - Flag if the robot should turn 180 degrees at the headlands */
             bool turn180 = false;
+            /** @brief Turning - Turn to the turn goal (adaptive), or dead reckoning when another corner is nearby */
+            bool adaptiveTurn = false;
+            /** @brief Turning - Point on the path the robot drives to in an adaptive turn: where an arc with the turning radius joins the next segment */
+            Utils::Geometry::Point turnGoal;
+            /** @brief Turning - Path index of the turn goal */
+            int turnGoalIndex = 0;
 
             // Pure Pursuit
             /** @brief Pure Pursuit - Flag respresents if the navigation controller is in steady state, if yes, sometimes other controllers are used. */

@@ -68,8 +68,15 @@ namespace Core {
         bool straightLine(double deaccerationDistance=0.5);
         /** @brief The robot spins (rotates in place) */
         bool spinning();
-        /** @brief The robot turns (no spinning) */
-        bool turn(double earlyStoppingAngle=0.0);
+        /** @brief The robot turns (no spinning) with the creep velocity, see setTurningVelocity(), until the heading reaches the heading goal */
+        bool turnDeadReckoning(double earlyStoppingAngle=0.0);
+        /**
+         * @brief The robot turns (no spinning) to the turn goal, see setTurnGoal()
+         * 
+         * @details Every call steers to the turn goal with pure pursuit, limited by the turning radius.
+         * @return true while turning, false when the turn goal is reached
+         */
+        bool turnAdaptive();
         /**
          * @brief After a turn, the robot drives on with pure pursuit at the minimum velocity until it is straight on the path
          * 
@@ -80,8 +87,12 @@ namespace Core {
         bool creepToCorner();
         /** @brief The robot drives to a specific position */
         bool creepToPosition();
+        /** @brief Turning radius times the turning radius factor */
+        double effectiveTurningRadius();
         /** @brief Set the creep velocity for turning with the turning radius */
         void setTurningVelocity();
+        /** @brief Set the turn goal for the corner being turned (the previous corner): where an arc with the turning radius joins the next segment */
+        void setTurnGoal();
     public:
         Fsm(Utils::Redis::VariableManager* manager, std::shared_ptr<Utils::Settings::Traject> traject, std::shared_ptr<Utils::Settings::PositionData> position);
         virtual ~Fsm() = default;
