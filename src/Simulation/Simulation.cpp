@@ -31,6 +31,24 @@ void Simulation::init() {
     field = std::make_shared<Field>(getVariable("pc.field.name")->getValue<string>(), platform.gps.utm_zone);
 }
 
+void Simulation::simulateHitches() {
+    for (Hitch& hitch : platform.hitches) {
+        string name = hitch.getEntityName();
+        string heightName = "plc.monitor." + name + ".height";
+        if (!existsVariable(heightName)) {
+            continue;
+        }
+        // The hitch moves to the setpoint when activated and to 0 when deactivated, see Hitch::setActivate
+        bool activate = getVariable("plc.control." + name + ".activate")->getValue<bool>();
+        auto timer = hitchMoveTimers.try_emplace(name, HITCH_MOVE_TIME).first;
+        if (timer->second.expired(activate)) {
+            double height = activate ? getVariable("plc.control." + name + ".setpoint")->getValue<int>() : 0.0;
+            getVariable(heightName)->setValue<double>(height);
+            LoggerStream::getInstance() << DEBUG << "Simulated hitch " << name << " reached height " << height;
+        }
+    }
+}
+
 void Simulation::serverTick() {
     // Propagate simulation to programming mode
     getVariable("plc.control.substate.programming")->setValue<bool>(getVariable("pc.simulation.active")->getValue<bool>());
@@ -63,6 +81,11 @@ void Simulation::serverTick() {
         getVariable("plc.monitor.navigation.velocity.longitudinal")->setValue<double>(yVelocity);
         getVariable("plc.monitor.navigation.velocity.lateral")->setValue<double>(xVelocity);
         getVariable("plc.monitor.navigation.velocity.angular")->setValue<double>(zVelocity);
+
+        // only when not attached to an actual robot, otherwise the PLC reports the hitch heights
+        if (!getVariable("plc.monitor.state.auto")->getValue<bool>()) {
+            simulateHitches();
+        }
 
         // ** GET NEW STATE **
         // GET DISCR IMPL DURING PROGRAMMING MODE TEST WITH PLC

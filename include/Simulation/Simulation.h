@@ -10,6 +10,8 @@
  */
 #pragma once
 
+#include <map>
+#include <chrono>
 #include <Utils/Settings/Platform.h>
 #include <Utils/Timing/Logic.h>
 #include <Utils/Redis/VariableManager.h>
@@ -50,6 +52,13 @@ namespace Core {
          * @details If a pulse of the notification acknowledge Redis variable is detected, the discrete operation is set as finished.
         */
         Utils::Timing::EdgeDetector notificationAcknowledgeEdge;
+
+        /** @brief Time a simulated hitch takes to reach its height after the activation changed */
+        static constexpr std::chrono::milliseconds HITCH_MOVE_TIME{2000};
+        /** @brief Per hitch: expires HITCH_MOVE_TIME after its activation changed */
+        std::map<std::string, Utils::Timing::TimeEdgeDetector> hitchMoveTimers;
+        /** @brief Set the height of the hitches HITCH_MOVE_TIME after their activation changed */
+        void simulateHitches();
         
     public:
         Simulation(const std::string ns);
