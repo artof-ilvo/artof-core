@@ -1,3 +1,4 @@
+#include <Exceptions/RedisExceptions.hpp>
 #include <Navigation/Navigation.h>
 #include <boost/filesystem.hpp>
 #include <ThirdParty/json.hpp>
@@ -131,7 +132,7 @@ void Navigation::serverTick()
     // reset traject
     if (edgeDetectorField.rising || traject->empty()) {
         // load the traject
-        traject->load(Field::checkFieldName(getVariable("pc.field.name")->getValue<string>()), 
+        traject->load(getVariable("pc.field.name")->getValue<string>(), 
                     platform.gps.utm_zone, 
                     getVariable("pc.navigation.spin_angle")->getValue<double>(),
                     getVariable("pc.purepursuit.inter_point_distance")->getValue<double>(),
@@ -255,7 +256,11 @@ int main() {
     string procName = "ilvo-navigation";
     LoggerStream::createInstance(procName);
     LoggerStream::getInstance() << INFO << "Navigation Logger started";
-    Navigation navbase(procName);
-    navbase.run();
+    try {
+        Navigation navbase(procName);
+        navbase.run();
+    } catch(const RedisConnectionException&) {
+        return 1;  // already logged with how to check the connection
+    }
     return 0;  
 }

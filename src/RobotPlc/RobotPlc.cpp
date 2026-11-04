@@ -1,3 +1,4 @@
+#include <Exceptions/RedisExceptions.hpp>
 #include <Utils/Timing/Clk.h>
 #include <chrono>
 #include <thread>
@@ -21,7 +22,11 @@ int main() {
     string procName = "ilvo-robot-plc";
     LoggerStream::createInstance(procName);
     LoggerStream::getInstance() << INFO << "Robot Plc Logger started";
-    PlcVariableManager robotPlc(procName);
-    robotPlc.run();
+    try {
+        PlcVariableManager robotPlc(procName);
+        robotPlc.run();
+    } catch(const RedisConnectionException&) {
+        return 1;  // already logged with how to check the connection
+    }
     return 0;    
 }

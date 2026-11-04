@@ -1,3 +1,4 @@
+#include <Exceptions/RedisExceptions.hpp>
 #include <Gps/GpsDevice.h>
 #include <Utils/Timing/Timing.h>
 #include <Utils/Geometry/Angle.h>
@@ -149,7 +150,11 @@ int main() {
     string procName = "ilvo-gps";
     LoggerStream::createInstance(procName);
     LoggerStream::getInstance() << INFO << "GpsDevice Logger started";
-    GpsDevice gps(procName);
-    gps.run();
+    try {
+        GpsDevice gps(procName);
+        gps.run();
+    } catch(const RedisConnectionException&) {
+        return 1;  // already logged with how to check the connection
+    }
     return 0;    
 }

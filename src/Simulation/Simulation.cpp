@@ -1,3 +1,4 @@
+#include <Exceptions/RedisExceptions.hpp>
 #include <Utils/Geometry/Transform.h>
 #include <Utils/Geometry/Angle.h>
 #include <Utils/Logging/LoggerStream.h>
@@ -27,7 +28,7 @@ Simulation::Simulation(const string ns) :
 {}
 
 void Simulation::init() {
-    field = std::make_shared<Field>(Field::checkFieldName(getVariable("pc.field.name")->getValue<string>()), platform.gps.utm_zone);
+    field = std::make_shared<Field>(getVariable("pc.field.name")->getValue<string>(), platform.gps.utm_zone);
 }
 
 void Simulation::serverTick() {
@@ -43,7 +44,7 @@ void Simulation::serverTick() {
     // update field
     edgeDetectorField.detect( getVariable("pc.field.updated")->getValue<bool>());
     if ( edgeDetectorField.falling ) {
-        field = std::make_shared<Field>(Field::checkFieldName(getVariable("pc.field.name")->getValue<string>()), platform.gps.utm_zone);
+        field = std::make_shared<Field>(getVariable("pc.field.name")->getValue<string>(), platform.gps.utm_zone);
     }
 
     // simulation
@@ -130,7 +131,11 @@ int main() {
     string procName = "ilvo-simulation";
     LoggerStream::createInstance(procName);
     LoggerStream::getInstance() << INFO << "Simulation Logger started";
-    Simulation simulation(procName);
-    simulation.run();
+    try {
+        Simulation simulation(procName);
+        simulation.run();
+    } catch(const RedisConnectionException&) {
+        return 1;  // already logged with how to check the connection
+    }
     return 0;    
 }

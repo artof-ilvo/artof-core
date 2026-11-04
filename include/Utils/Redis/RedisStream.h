@@ -42,6 +42,9 @@ namespace Redis {
         std::shared_ptr<std::iostream> stream;
 
         std::map<std::string, std::pair<std::shared_ptr<boost::thread>, std::shared_ptr<std::atomic<bool>>>> subscriberThreads;
+
+        /** @brief Log why the connection failed and how to check it */
+        void logConnectionError(const std::string& reason);
     public:
         RedisStream() = default;
         RedisStream(nlohmann::json j);
