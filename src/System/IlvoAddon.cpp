@@ -68,8 +68,30 @@ void IlvoAddon::updateSoftware() {
     start();
 }
 
+json IlvoAddon::hostDockerConfig() {
+    json config = dockerConfig;
+    if (!config.contains("HostConfig") || !config["HostConfig"].contains("Binds") || !getenv("ILVO_PATH")) {
+        return config;
+    }
+    string ilvoPath = getenv("ILVO_PATH");
+    string hostPath = getenv("ILVO_HOST_PATH") ? getenv("ILVO_HOST_PATH") : dockerClient.own_mount_source(ilvoPath);
+    if (hostPath.empty() || hostPath == ilvoPath) {
+        return config;
+    }
+    for (auto& bind : config["HostConfig"]["Binds"]) {
+        string b = bind.get<string>();
+        string source = b.substr(0, b.find(':'));
+        if (source == ilvoPath || source.rfind(ilvoPath + "/", 0) == 0) {
+            bind = hostPath + b.substr(ilvoPath.size());
+        }
+    }
+    LoggerStream::getInstance() << INFO << "Add-on \"" << data.getName() << "\" binds " << ilvoPath << " from host path " << hostPath;
+    return config;
+}
+
 void IlvoAddon::createContainer(const std::string& imageName) {
-    json docCreate = dockerClient.create_container(dockerConfig, data.getName()); 
+    json config = hostDockerConfig();
+    json docCreate = dockerClient.create_container(config, data.getName()); 
     LoggerStream::getInstance() << DEBUG << "Create container code: " << docCreate["code"] ;
     if (docCreate["code"] == 201) {
         containerId = docCreate["data"]["Id"].get<string>();
@@ -83,7 +105,7 @@ void IlvoAddon::createContainer(const std::string& imageName) {
         LoggerStream::getInstance() << WARN << "Command used: " << dockerClient.get_last_command();
         LoggerStream::getInstance() << WARN << docCreate.dump();
         LoggerStream::getInstance() << WARN <<"Is the config correct?";
-        LoggerStream::getInstance() << WARN << dockerConfig.dump();
+        LoggerStream::getInstance() << WARN << config.dump();
     }
 }
 

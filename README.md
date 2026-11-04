@@ -211,7 +211,9 @@ docker compose up -d
 ```
 `ilvo/data` is mounted as `ILVO_PATH`. **Do not edit its configuration by hand**: it is generated from the package defaults in `artof-core/usr/share/artof-core/defaults`, with the Docker-specific values of `ilvo/docker-overrides.json` applied:
 - `config.json`: Redis is reached at `"ip": "redis"`, the compose service name, instead of `127.0.0.1`.
-- `redis.init.json`: the add-on containers mount the host data folder in `HostConfig.Binds`, join the compose network through `HostConfig.NetworkMode` (`ilvo_artof_network`) and publish their ports through `ExposedPorts` and `HostConfig.PortBindings`.
+- `redis.init.json`: the add-on containers join the compose network through `HostConfig.NetworkMode` (`ilvo_artof_network`) and publish their ports through `ExposedPorts` and `HostConfig.PortBindings`.
+
+The add-on binds in `HostConfig.Binds` use `/var/lib/ilvo` paths, as on a robot. The system manager creates the add-ons through the Docker socket, so when it runs in a container it replaces `ILVO_PATH` in the bind sources with the host folder mounted there (`ilvo/data`), found by inspecting its own container. Set `ILVO_HOST_PATH` on the `artof` service to give that host folder explicitly.
 
 After changing a default or an override, regenerate `ilvo/data` and commit both:
 ```

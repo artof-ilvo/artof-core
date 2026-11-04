@@ -12,9 +12,6 @@
                 "system": {
                     "DockerConfig": {
                         "HostConfig": {
-                            "Binds": [
-                                "/d/artof-docker/docker/data:/var/lib/ilvo"
-                            ],
                             "NetworkMode": "ilvo_artof_network",
                             "PortBindings": {
                                 "80/tcp": [
@@ -36,13 +33,13 @@
                     "DockerConfig": {
                         "HostConfig": {
                             "Binds": [
-                                "/d/artof-docker/docker/data/node-red:/data",
-                                "/d/artof-docker/docker/data/field:/var/lib/ilvo/field",
-                                "/d/artof-docker/docker/data/implement:/var/lib/ilvo/implement",
-                                "/d/artof-docker/docker/data/config.json:/var/lib/ilvo/config.json",
-                                "/d/artof-docker/docker/data/settings.json:/var/lib/ilvo/settings.json",
-                                "/d/artof-docker/docker/data/types.json:/var/lib/ilvo/types.json",
-                                "/d/artof-docker/docker/data/redis.init.json:/var/lib/ilvo/redis.init.json"
+                                "/var/lib/ilvo/node-red:/data",
+                                "/var/lib/ilvo/field:/var/lib/ilvo/field",
+                                "/var/lib/ilvo/implement:/var/lib/ilvo/implement",
+                                "/var/lib/ilvo/config.json:/var/lib/ilvo/config.json",
+                                "/var/lib/ilvo/settings.json:/var/lib/ilvo/settings.json",
+                                "/var/lib/ilvo/types.json:/var/lib/ilvo/types.json",
+                                "/var/lib/ilvo/redis.init.json:/var/lib/ilvo/redis.init.json"
                             ],
                             "NetworkMode": "ilvo_artof_network",
                             "PortBindings": {
