@@ -62,20 +62,31 @@ namespace Core {
         /** @brief Take the next corner */
         void nextCorner();
 
-        /** @brief The robot drives using the pure pursuit algorithm */
-        void purePursuit();
+        /** @brief The robot drives using the pure pursuit algorithm, at the minimum velocity when slow */
+        void purePursuit(bool slow=false);
         /** @brief The robot drives straight line (no algorithm) */
         bool straightLine(double deaccerationDistance=0.5);
         /** @brief The robot spins (rotates in place) */
         bool spinning();
-        /** @brief The robot turns (no spinning) */
-        bool turn(double earlyStoppingAngle=0.0);
+        /**
+         * @brief The robot turns (no spinning) to the turn goal, see setTurnGoal()
+         * 
+         * @details Every call steers to the turn goal with pure pursuit, limited by the turning radius.
+         * @return true while turning, false when the turn goal is reached
+         */
+        bool turn();
+        /**
+         * @brief After a turn, the robot drives on with pure pursuit at the minimum velocity until it is straight on the path
+         * 
+         * @return true while aligning, false when the heading and the position match the path
+         */
+        bool align();
         /** @brief The robot drives to a specific corner */
         bool creepToCorner();
         /** @brief The robot drives to a specific position */
         bool creepToPosition();
-        /** @brief Set the creep velocity for turning with the turning radius */
-        void setTurningVelocity();
+        /** @brief Set the turn goal for the corner being turned (the previous corner) */
+        void setTurnGoal();
     public:
         Fsm(Utils::Redis::VariableManager* manager, std::shared_ptr<Utils::Settings::Traject> traject, std::shared_ptr<Utils::Settings::PositionData> position);
         virtual ~Fsm() = default;

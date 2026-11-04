@@ -25,8 +25,8 @@ void FsmRollback::update()
             // update next corner
             nextCorner();
             algorithm.headingGoal = toRobotFrame(traject->absPathOrientation(position->corners.previousCorner.index+3) );
-            // set turning velocity
-            setTurningVelocity();
+            // drive to where the turn joins the next segment
+            setTurnGoal();
 
             // set reset path distance temorarily larger
             position->resetPathDistance = RESET_PATH_DISTANCE_LARGE;
@@ -34,20 +34,24 @@ void FsmRollback::update()
         break;}
     case TURN:{
         bool turnNextCorner = position->corners.nextCorner.point.distance(position->currentPoint) <= (manager->getVariable("pc.navigation.turning_radius")->getValue<double>() + 1.5);
-        double stopTurnAngle = manager->getValueOr<double>("pc.navigation.stop_turn_angle", 0.0);
-        double earlyStoppingAngle = turnNextCorner ? 0.0 : stopTurnAngle;
-        if (!turn(earlyStoppingAngle)) {
+        if (!turn()) {
             // is there another corner nearby? Creep backwards to come in a good position to take this corner
             if (turnNextCorner) {                
                 LoggerStream::getInstance() << DEBUG << "TURN -> CREEP_TO_POSITION";
                 algorithm.fsmState = CREEP_TO_POSITION;
             } else {
-                LoggerStream::getInstance() << DEBUG << "TURN -> STRAIGHTLINE";
-                toStraightLine();
-
-                // set reset path distance again to the default
-                position->resetPathDistance = RESET_PATH_DISTANCE_DEFAULT;
+                LoggerStream::getInstance() << DEBUG << "TURN -> ALIGN";
+                algorithm.fsmState = ALIGN;
             }
+        }
+        break;}
+    case ALIGN: {
+        if (!align()) {
+            LoggerStream::getInstance() << DEBUG << "ALIGN -> STRAIGHTLINE";
+            toStraightLine();
+
+            // set reset path distance again to the default
+            position->resetPathDistance = RESET_PATH_DISTANCE_DEFAULT;
         }
         break;}
     case CREEP_TO_POSITION: {
@@ -59,8 +63,8 @@ void FsmRollback::update()
             // update next corner
             nextCorner();
             algorithm.headingGoal = toRobotFrame(traject->absPathOrientation(position->corners.previousCorner.index+3) );
-            // set turning velocity
-            setTurningVelocity();
+            // drive to where the turn joins the next segment
+            setTurnGoal();
         }
         break;}
     default:

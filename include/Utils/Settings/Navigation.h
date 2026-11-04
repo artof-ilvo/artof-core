@@ -27,6 +27,12 @@ namespace Settings {
 
     const double RESET_PATH_DISTANCE_DEFAULT = 2.0;
     const double RESET_PATH_DISTANCE_LARGE = 10.0;
+    /** @brief Distance (m) to the turn goal at which it is reached */
+    const double TURN_GOAL_TOLERANCE = 0.3;
+    /** @brief Angle (degrees) to the path heading at which the robot is straight again after a turn */
+    const double TURN_ALIGN_ANGLE = 5.0;
+    /** @brief Distance (m) to the path at which the robot is on the path again after a turn */
+    const double TURN_ALIGN_DISTANCE = 0.1;
 
     /** @brief FSM states. */
     enum FsmState {
@@ -35,7 +41,8 @@ namespace Settings {
         TURN, 
         CREEP_SIDEWAYS, 
         CREEP_TO_CORNER, 
-        CREEP_TO_POSITION
+        CREEP_TO_POSITION,
+        ALIGN
     };
     inline std::map<FsmState, std::string> fsmStateToString = {
         {STRAIGHTLINE, "STRAIGHTLINE"},
@@ -43,7 +50,8 @@ namespace Settings {
         {TURN, "TURN"},
         {CREEP_SIDEWAYS, "CREEP_SIDEWAYS"},
         {CREEP_TO_CORNER, "CREEP_TO_CORNER"},
-        {CREEP_TO_POSITION, "CREEP_TO_POSITION"}
+        {CREEP_TO_POSITION, "CREEP_TO_POSITION"},
+        {ALIGN, "ALIGN"}
     };
     /** @brief Line following algorithm. */
     enum LineFollowingMode {PUREPURSUIT, MPC};
@@ -96,6 +104,10 @@ namespace Settings {
             double headingGoal;  // degrees
             /** @brief Turning - Flag if the robot should turn 180 degrees at the headlands */
             bool turn180 = false;
+            /** @brief Turning - Point on the path the robot drives to in the TURN state: where an arc with the turning radius joins the next segment */
+            Utils::Geometry::Point turnGoal;
+            /** @brief Turning - Path index of the turn goal */
+            int turnGoalIndex = 0;
 
             // Pure Pursuit
             /** @brief Pure Pursuit - Flag respresents if the navigation controller is in steady state, if yes, sometimes other controllers are used. */
