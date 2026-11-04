@@ -56,10 +56,27 @@ all_processes_running() {
     for p in $PROCESSES; do process_running "$p" || return 1; done
 }
 
-# implement.states must not hold NaN coordinates (written as null)
-implement_states_valid() {
-    states=$(redis JSON.GET implement.states)
-    [ -z "$states" ] || not echo "$states" | grep -q null
+# ilvo-operation publishes the implements of the loaded field (flame-weeder for
+# the example field) every tick
+implement_states() { redis JSON.GET implement.states; }
+# parse_states <python check>: run the check on the parsed implement.states
+parse_states() {
+    implement_states | python3 -c "
+import json, sys
+states = json.load(sys.stdin)
+if isinstance(states, str):  # redis-cli quotes the value on a terminal
+    states = json.loads(states)
+$1"
+}
+implements_published() { parse_states 'sys.exit(not states)'; }
+# NaN coordinates are written as null
+implement_coordinates_valid() {
+    parse_states '
+for implement in states.values():
+    for section in implement["sections"]:
+        for point in section["xy"] + section["latlng"]:
+            if None in point:
+                sys.exit(1)'
 }
 
 # Values from the generated configuration
@@ -82,12 +99,15 @@ cleanup() {
         echo "---- diagnostics ----" >&2
         compose ps -a >&2 || true
         compose logs --tail 80 >&2 || true
+        echo "implement.states: $(implement_states 2>/dev/null)" >&2
         for addon in ${ADDONS:-}; do docker logs --tail 40 "$addon" >&2 || true; done
         tail -n 20 "$STACK"/data/logs/* >&2 || true
     fi
     compose down -v --remove-orphans >/dev/null 2>&1 || true
     for addon in ${ADDONS:-}; do docker rm -f "$addon" >/dev/null 2>&1 || true; done
-    rm -rf "$WORK"
+    # Node-RED writes its data as uid 1000, which may not be this user
+    rm -rf "$WORK" 2>/dev/null || docker run --rm -v "$WORK:/work" "$IMAGE" rm -rf /work/ilvo
+    rm -rf "$WORK" || true
 }
 trap cleanup EXIT
 
@@ -133,7 +153,8 @@ log "Checking the stack stays up"
 sleep 20
 check "artof container is still running" artof_running
 check "all processes are still running" all_processes_running
-check "implement.states has no null coordinates" implement_states_valid
+check "ilvo-operation publishes the implements" wait_until 60 implements_published
+check "implement coordinates are numbers" implement_coordinates_valid
 check "processes write logs" sh -c "ls '$STACK/data/logs' | grep -q ."
 
 log "Restarting the artof container"

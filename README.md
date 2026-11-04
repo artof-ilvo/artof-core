@@ -204,11 +204,21 @@ Keep a backup of the APT signing key outside GitHub. If it is lost, a new key mu
 
 ## Docker setup
 
-`ilvo/` runs the whole stack in Docker, without installing anything on the host:
+`ilvo/` runs the whole stack in Docker, without installing anything on the host. Download it from MinIO, no clone needed:
 ```
-cd ilvo
+curl -fsSL https://minio.ilvo.be:9000/tv115-ilvo-robotics/docker/artof-docker-stable.tar.gz | tar xz
+cd artof-docker
 docker compose up -d
 ```
+| Download | Runs the image | Published on |
+|---|---|---|
+| `artof-docker-stable.tar.gz` | `artof-core:latest` | every release tag |
+| `artof-docker-<tag>.tar.gz` (e.g. `artof-docker-v1.2.0.tar.gz`) | `artof-core:<tag>` | every release tag |
+| `artof-docker-dev.tar.gz` | `artof-core:dev` | every push to `main` |
+
+From a clone, run `docker compose up -d` in `ilvo/` instead. The compose project is always named `ilvo`, so the add-ons find the `ilvo_artof_network` network whatever the folder is called.
+
+`scripts/package-docker.sh <image> <output.tar.gz>` builds the download; CI publishes it with `scripts/publish-docker.sh` after the image is pushed.
 `ilvo/data` is mounted as `ILVO_PATH`. **Do not edit its configuration by hand**: it is generated from the package defaults in `artof-core/usr/share/artof-core/defaults`, with the Docker-specific values of `ilvo/docker-overrides.json` applied:
 - `config.json`: Redis is reached at `"ip": "redis"`, the compose service name, instead of `127.0.0.1`.
 - `redis.init.json`: the add-on containers join the compose network through `HostConfig.NetworkMode` (`ilvo_artof_network`) and publish their ports through `ExposedPorts` and `HostConfig.PortBindings`.
