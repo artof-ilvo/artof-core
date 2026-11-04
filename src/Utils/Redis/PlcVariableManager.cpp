@@ -312,9 +312,12 @@ void PlcVariableManager::writeControlValuesToPlc()
                 controlData[byteCount+1] = (unsigned char) val_char[6];
                 controlData[byteCount+0] = (unsigned char) val_char[7];
             } else if (var->getType() == "string") {
+                // 16 characters, zero padded, as the monitor data is read; the layout
+                // reserves fewer bytes, so stay within the buffer for the last variable
                 string val = var->getValue<string>();
-                unsigned char* val_char = reinterpret_cast<unsigned char*>(&val);
-                memcpy((void*) (controlData[byteCount]), val_char, 16);  // TODO compile warning on this!
+                size_t len = min((size_t) 16, (size_t) (controlSize - byteCount));
+                memset(controlData + byteCount, 0, len);
+                memcpy(controlData + byteCount, val.data(), min(val.size(), len));
             } else if (var->getType() == "bool") {
                 int val = var->getValue<bool>();
                 unsigned char *val_char = reinterpret_cast<unsigned char*>(&val);
@@ -381,9 +384,12 @@ void PlcVariableManager::writeControlValuesToPlc()
                 controlData[byteCount+6] = (unsigned char) val_char[6];
                 controlData[byteCount+7] = (unsigned char) val_char[7];
             } else if (var->getType() == "string") {
+                // 16 characters, zero padded, as the monitor data is read; the layout
+                // reserves fewer bytes, so stay within the buffer for the last variable
                 string val = var->getValue<string>();
-                unsigned char* val_char = reinterpret_cast<unsigned char*>(&val);
-                memcpy((void*) (controlData[byteCount]), val_char, 16);  // TODO compile warning on this!
+                size_t len = min((size_t) 16, (size_t) (controlSize - byteCount));
+                memset(controlData + byteCount, 0, len);
+                memcpy(controlData + byteCount, val.data(), min(val.size(), len));
             } else if (var->getType() == "bool") {
                 int val = var->getValue<bool>();
                 unsigned char *val_char = reinterpret_cast<unsigned char*>(&val);
