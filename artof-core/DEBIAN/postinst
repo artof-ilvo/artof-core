@@ -25,7 +25,9 @@ wait_for_redis() {
 # check every default entry. Missing or empty entries get the default, an
 # entry of the wrong type is moved aside first. Existing content is kept.
 if getent passwd 1000 >/dev/null; then owner=1000:1000; else owner=root:root; fi
-mkdir -p "$ILVO_PATH/logs"
+# node-red/ is bound into the Node-RED add-on, which runs as uid 1000. Created
+# here so it gets the robot user below, not root as Docker would create it.
+mkdir -p "$ILVO_PATH/logs" "$ILVO_PATH/node-red"
 if [ -d "$LEGACY_BACKUP" ]; then
     cp -a "$LEGACY_BACKUP/." "$ILVO_PATH/"
     rm -rf "$LEGACY_BACKUP"

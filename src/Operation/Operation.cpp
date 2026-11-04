@@ -37,7 +37,7 @@ void Operation::init()
 
 void Operation::setRedisJsonImplStates()
 {
-    json jImplements = json();
+    json jImplements = json::object();  // {} rather than null when no implement is loaded
     for (Task& task: traject->getField().getTasks()) {
         if (!task.isType("cardan")) {
             bool implementType = find(implementTypes.begin(), implementTypes.end(), task.getType()) != implementTypes.end();
