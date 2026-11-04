@@ -1,42 +1,37 @@
 /**
- * @file NavigationControl.h
+ * @file Fsm.h
  * @author Axel Willekens (axel.willekens@ilvo.vlaanderen.be)
- * @brief NavigationControl that implements the navigation algorithm
+ * @brief Base class of the finite state machines (FSM) of the navigation algorithms
  * @version 0.1
- * @date 2024-03-19
- * 
+ * @date 2026-11-04
+ *
  * @copyright Copyright (c) 2024 Flanders Research Institute for Agriculture, Fisheries and Food (ILVO)
- * 
+ *
  */
 
 #pragma once
 
 #include <memory>
-#include <fstream>
-#include <vector>
 
-#include <Navigation/VelocityControl.h>
 #include <Utils/Settings/Traject.h>
 #include <Utils/Redis/VariableManager.h>
 #include <Utils/Geometry/Transform.h>
 #include <Utils/Settings/Platform.h>
 #include <Utils/Pid/PidController.h>
-#include <Utils/Timing/Logic.h>
 
 namespace Ilvo {
 namespace Core {
 
     /**
-     * @brief NavigationControl that implements the navigation algorithm
-     * 
-     * @details The controller implements the control algorithm of the robot platform.
-     * This control algorithm is a combination of 
-     * - a finite state machine (FSM), that depends on platform settings
-     * - a navigation algorithm, e.g. pure pursuit.
+     * @brief Base class of the finite state machines (FSM) of the navigation algorithms
+     *
+     * @details A navigation algorithm is a state machine that combines the movements of
+     * this class (straight line with pure pursuit, spinning, turning and creeping) to
+     * follow the traject and take its corners.
      */
-    class NavigationControl
+    class Fsm
     {
-    private:
+    protected:
         /** @brief Platform settings */
         Utils::Settings::Platform& platform;
         /** @brief Variable manager (reference to Navigation) */
@@ -55,8 +50,6 @@ namespace Core {
         /** @brief Pid controller for pure pursuit) */
         Utils::Pid::PidController purepursuitController;
 
-        VelocityControl velocityControl;
-
         /** @brief Velocity operation data used during creep operation */
         Utils::Settings::VelocityVector creepVelocity;
         /** @brief Stops the robot's linear operation */
@@ -64,38 +57,9 @@ namespace Core {
         /** @brief Stops the robot's angular operation */
         bool stopTurning(double currentSmallestAngleDegrees, double earlyStoppingAngle=0.0);
 
-        /** 
-         * @brief Spinning for cornering
-         * 
-         * @details The robot spins for the angle of the corner during cornering. 
-         * Note: applicable for 4ws4wd robots or skid steering robots.
-         */
-        void stateMachineSpinning();
-        /** 
-         * @brief No spinning for cornering 
-         * 
-         * @details The robot spins in place 
-         */
-        void stateMachineNoSpinning();
-        /** 
-         * @brief G-Turn for cornering
-         * 
-         * @details The robot spins for 180 degrees when reaching the first corner drives sideways to the second corner and starts driving forward again when reaching the second corner. 
-         * Note: applicable for 4ws4wd robots.
-         */
-        void stateMachineGTurn();
-        /**
-         * @brief The robot turns and rolls back
-         * 
-         * @details The robot starts turning when approaching a corner. If the second corner is closer then its turning radius. It rolls back to get in the right postition to take this corner.
-         */
-        void stateMachineRollBack();
-
-        /**
-         * @brief Take the next corner
-         * 
-         * @param force 
-         */
+        /** @brief Go to the STRAIGHTLINE state: reset the lateral controllers and enable the implement again */
+        void toStraightLine();
+        /** @brief Take the next corner */
         void nextCorner();
 
         /** @brief The robot drives using the pure pursuit algorithm */
@@ -110,38 +74,31 @@ namespace Core {
         bool creepToCorner();
         /** @brief The robot drives to a specific position */
         bool creepToPosition();
+        /** @brief Set the creep velocity for turning with the turning radius */
+        void setTurningVelocity();
     public:
-        NavigationControl();
-        ~NavigationControl() = default;
+        Fsm(Utils::Redis::VariableManager* manager, std::shared_ptr<Utils::Settings::Traject> traject, std::shared_ptr<Utils::Settings::PositionData> position);
+        virtual ~Fsm() = default;
 
-        /** @brief Reset the field */
+        /** @brief Execute one step of the state machine */
+        virtual void update() = 0;
+
+        /** @brief Reset the state machine and the controllers */
         void reset();
-        /** @brief Reset the controller */
-        void init(Utils::Redis::VariableManager* manager, std::shared_ptr<Utils::Settings::Traject> traject, std::shared_ptr<Utils::Settings::PositionData> position);
         /** @brief Set the velocity operation */
         void setVelocityOperation(double longitudinalVelocity=0.0, double lateralVelocity=0.0, double angularVelocity=0.0);
-        /** @brief Set the velocity operation for roll back mode */
-        void setTurningVelocity();
-        /** @brief Verifies the robot's orientation in respect to the traject */
-        void verifyRobotOrientation();
-        
-        /** 
-         * @brief Update the navigation controller 
-         * 
-         */
-        void update(Utils::Settings::AlgorithmMode algorithmMode, bool firstTime=false);
 
         /**
          * @brief Check if the robot is driving sideways
-         * 
+         *
          * @return true: the robot is driving sideways
          * @return false: the robot is not driving sideways
          */
         bool getActiveSideways() const;
-        const Utils::Settings::AlgorithmData& getAlgorithmData();
+        Utils::Settings::AlgorithmData& getAlgorithmData();
     };
 
-    typedef std::shared_ptr<NavigationControl> ControllerPtr;
+    typedef std::unique_ptr<Fsm> FsmPtr;
 
 } // Core
 } // Ilvo
